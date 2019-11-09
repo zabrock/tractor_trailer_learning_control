@@ -22,7 +22,7 @@ class RandomPathGenerator(object):
 		self.accel_lim_x = [0,1,3,5,7,11,18,23,25,27,31,33,35]
 		self.accel_lim_y = [0,0.25,1.3,3,4.5,5,5.2,4.5,4.6,4.6,4.2,4.2,4]
 		
-	def get_random_path(self, end_time=20, delta_t=0.02, vel=None):
+	def get_random_path(self, end_time=40, delta_t=0.02, vel=None):
 		'''
 		Generates a random path beginning at [0, 0] with initial heading of 0 degrees
 		which is traveled at constant velocity vel for the timespan [0, end_time].
@@ -48,13 +48,15 @@ class RandomPathGenerator(object):
 		# Set initial lateral acceleration to zero
 		lat_accel = 0
 		# Set initial velocity to be in the x-direction
-		vel_vec = np.array([vel, 0])
+		vel_vec = np.array([vel, 0.0])
 		# Determine the lateral acceleration limit for this velocity
 		lat_accel_limit = np.interp(vel,self.accel_lim_x,self.accel_lim_y)
 		
 		for i in range(0,len(t)-1):
 			# Randomize jerk of current time step
-			jerk = np.random.normal(0,2)
+			width = 3
+#			jerk = np.random.normal(0,2)
+			jerk = width*np.random.random() - width/2
 			# Integrate to get lateral acceleration
 			lat_accel += jerk*delta_t
 			# Make sure the lateral acceleration fits within the limits for the
@@ -73,11 +75,11 @@ class RandomPathGenerator(object):
 			x[i+1] = x[i] + vel_vec[0]*delta_t
 			y[i+1] = y[i] + vel_vec[1]*delta_t
 			
-		return x, y
+		return x, y, t, vel*np.ones(len(t))
 			
 if __name__ == "__main__":
 	import matplotlib.pyplot as plt
 	
 	rpg = RandomPathGenerator()
-	x, y = rpg.get_random_path()
+	x, y = rpg.get_random_path(vel=5)
 	plt.plot(x, y)

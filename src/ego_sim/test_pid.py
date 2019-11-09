@@ -9,6 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from ego_sim import EgoSim
 from stanley_pid import StanleyPID
+from random_path_generator import RandomPathGenerator
 
 def read_path_from_original_simpack_csv(file):
 	'''
@@ -88,7 +89,30 @@ def pid_test():
 	plt.plot(x_true,y_true,'r--')
 	plt.show()
 	
+def random_path_test():
+	rpg = RandomPathGenerator()
+	x_true, y_true, t, vel = rpg.get_random_path()
+	ego = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+	pid = StanleyPID()
+	
+
+	x = []
+	y = []
+	delta = []
+	th1 = []
+	th2 = []
+	
+	for i in range(0,len(t)):
+		state = ego.convert_world_state_to_front()
+		ctrl_delta, ctrl_vel = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
+		xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+		x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
+	
+	plt.plot(x,y)
+	plt.plot(x_true,y_true,'r--')
+	plt.show()
 	
 if __name__ == "__main__":
-	ego_ol_test()
-	pid_test()
+#	ego_ol_test()
+#	pid_test()
+	random_path_test()

@@ -13,6 +13,8 @@ import numpy as np
 import pandas as pd
 import numpy as np
 from src.ego_sim.random_path_generator import RandomPathGenerator
+from src.ego_sim.ego_sim import EgoSim
+from src.ego_sim.stanley_pid import StanleyPID
 
 class Net1(nn.Module):
 
@@ -25,7 +27,7 @@ class Net1(nn.Module):
         # an affine operation: y = Wx + b
         self.fc1 = nn.Linear(3, 5)  # 6*6 from image dimension
         #self.fc2 = nn.Linear(10, 5)
-        self.fc3 = nn.Linear(5, 2)
+        self.fc3 = nn.Linear(5, 1)
 
     def forward(self, x):
         # Max pooling over a (2, 2) window
@@ -83,16 +85,49 @@ def transfer_weights(network1,network2):
     for f in network1.parameters():
         weights_2_transfer.append()
 
+def test_network(network):
+    rpg = RandomPathGenerator()
+    x_true, y_true, t, vel = rpg.get_random_path()
+    ego = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+    pid = StanleyPID()
+    
+
+    x = []
+    y = []
+    delta = []
+    th1 = []
+    th2 = []
+    
+    for i in range(0,len(t)):
+        state = ego.convert_world_state_to_front()
+        _, _, ct, hd = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
+        print([ct,hd,vel])
+        network_inputs=ct
+        np.append(network_inputs,hd,vel)
+        #np.append(network_inputs,vel)
+        #network_inputs.append(hd)
+        #network_inputs.append(vel)
+        ctrl_delta = network(torch.tensor(network_inputs))
+        xt,yt,deltat,th1t,th2t = ego.simulate_timestep([vel,ctrl_delta])
+        x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
+    
+    plt.plot(x,y)
+    plt.plot(x_true,y_true,'r--')
+    plt.show()
+
 def main():
     network=Net1()
     network.zero_grad()
     learning_rate = 0.01
-    PID_Data=np.random.rand(100,5)
+    #PID_Data=np.random.rand(100,5)
     #print('PID',PID_Data)
-    #PID_Data=pd.read_csv('C:\Users\Nigel Swenson\Git_stuff\tractor_trailer_learning_control\src',header=0,names=names,usecols=[0,1,2,4,5])
+    PID_Data=pd.read_csv('random_path_pid_0.csv',sep=',',header=0)
+    #print(PID_Data)
+    PID_Data=PID_Data.values
     input1=PID_Data[:,0:3]
     target1=PID_Data[:,3:]
-    for i in range(100):
+    for i in range(10):
+        running_loss=0
         for j in range(len(PID_Data)):
             #print(np.shape(input1))
             #print(network.parameters())
@@ -105,19 +140,26 @@ def main():
             criterion = nn.MSELoss()
             loss = criterion(out, network_target)
             loss.backward()
+            running_loss += loss.item()
+            #print(loss.item())
             for f in network.parameters():
                 f.data.sub_(f.grad.data * learning_rate)
         np.random.shuffle(PID_Data)
+        print(PID_Data[0])
         input1=PID_Data[:,0:3]
         target1=PID_Data[:,3:]
-    a=network.parameters()
-    print(a)
+        print('[%5d] loss: %.3f' %
+        (i + 1, running_loss))
+    running_loss = 0.0
+    #a=network.parameters()
+    #print(a)
+    #test_network(network)
     '''
-	for i in range(0,len(t)):
-		state = ego.convert_world_state_to_front()
-		ctrl_delta, ctrl_vel = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
-		xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
-		x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
+    for i in range(0,len(t)):
+        state = ego.convert_world_state_to_front()
+        ctrl_delta, ctrl_vel = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
+        xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+        x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
 def calculateError():
     
     '''

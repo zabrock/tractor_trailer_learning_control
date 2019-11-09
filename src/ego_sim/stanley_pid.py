@@ -84,7 +84,7 @@ class StanleyPID(object):
 		self.diff_d1 = err_diff
 		self.last_closest_idx = I_min
 		
-		return ctrl_delta, ctrl_vel
+		return ctrl_delta, ctrl_vel, ct_err, hd_err
 		
 def calc_path_error(state,path_x,path_y,I_min):
 	'''

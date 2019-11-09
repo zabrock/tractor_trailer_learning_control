@@ -37,23 +37,24 @@ class EgoSim(object):
 		If other parameters are desired, the corresponding entries in the P
 		dictionary for the EgoSim object may be overwritten.
 		'''
-		P = {'m1': 9159.63,
-			   'I1': 55660.3,
-			   'm2': 27091.8,
-			   'I2': 386841,
-			   'a1': 2.43264,
-			   'c': 0.2286,
-			   'l1': 5.7404,
-			   'l2': 16.104-0.914-3.083-1.2446/2,
-			   'a2': 5.9336,
-			   'h1': 3.0792,
-			   'b1': 3.3078,
-			   'b2': 5.5511,
-			   'C1': 187020.2*2,
-			   'C2': 130274.0*4,
-			   'C3': 130274.0*4,
-			   'C4': 115000.0*4,
-			   'C5': 115000.0*4,
+		P = {'m1': 9159.63, # Mass of the truck, kg
+			   'I1': 55660.3, # Inertia of the truck, kg*m^2
+			   'm2': 27091.8, # Mass of the trailer, kg
+			   'I2': 386841, # INertia of the trailer, kg*m^2
+			   'a1': 2.43264, # Distance from truck COG to front axle, m
+			   'c': 0.2286, # Firth-wheel offset from truck drive axle virtual center, m
+			   'l1': 5.7404, # Wheelbase from truck front axle to drive axle virtual center, m
+			   'l2': 16.104-0.914-3.083-1.2446/2, # Distance from trailer axle to fifth wheel, m
+			   'a2': 5.9336, # Distance from fifth wheel to trailer COG, m
+			   'h1': 3.0792, # Distance from truck COG to fifth wheel, m
+			   'b1': 3.3078, # Distance from truck COG to drive axle virtual center, m
+			   'b2': 5.5511, # Distance from trailer COG to trailer axle, m
+			   'C1': 187020.2*2, # Sum of truck front axle cornering stiffness, N/rad
+			   'C2': 130274.0*4, # Sum of truck's first drive axle cornering stiffness, N/rad
+			   'C3': 130274.0*4, # Sum of truck's second drive axle cornering stiffness, N/rad
+			   'C4': 115000.0*4, # Sum of trailer's first axle cornering stiffness, N/rad
+			   'C5': 115000.0*4, # Sum of trailer's second drive axle cornering stiffness, N/rad
+			   # The following parameters are used for visualization or more advanced collision checking only
 			   'truck_width': 2.57,
 			   'truck_str_ax2front': 1.295,
 			   'truck_str_ax2rear': 7.275,

@@ -81,7 +81,7 @@ def pid_test():
 	
 	for i in range(0,len(t)):
 		state = ego.convert_world_state_to_front()
-		ctrl_delta, ctrl_vel = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
+		ctrl_delta, ctrl_vel, ct, hd = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
 		xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
 		x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
 	
@@ -104,7 +104,7 @@ def random_path_test():
 	
 	for i in range(0,len(t)):
 		state = ego.convert_world_state_to_front()
-		ctrl_delta, ctrl_vel = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
+		ctrl_delta, ctrl_vel, ct, hd = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
 		xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
 		x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
 	

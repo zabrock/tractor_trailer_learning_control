@@ -119,6 +119,7 @@ def main():
     network=Net1()
     network.zero_grad()
     learning_rate = 0.01
+    network2=Net2()
     #PID_Data=np.random.rand(100,5)
     #print('PID',PID_Data)
     PID_Data=pd.read_csv('random_path_pid_0.csv',sep=',',header=0)
@@ -126,7 +127,7 @@ def main():
     PID_Data=PID_Data.values
     input1=PID_Data[:,0:3]
     target1=PID_Data[:,3:]
-    for i in range(10):
+    for i in range(5):
         running_loss=0
         for j in range(len(PID_Data)):
             #print(np.shape(input1))
@@ -144,13 +145,25 @@ def main():
             #print(loss.item())
             for f in network.parameters():
                 f.data.sub_(f.grad.data * learning_rate)
-        np.random.shuffle(PID_Data)
-        print(PID_Data[0])
+        PID_Data=pd.read_csv('random_path_pid_'+str(i)+'.csv',sep=',',header=0)
+        #print(PID_Data)
+        PID_Data=PID_Data.values
         input1=PID_Data[:,0:3]
         target1=PID_Data[:,3:]
         print('[%5d] loss: %.3f' %
         (i + 1, running_loss))
     running_loss = 0.0
+
+
+    network2.fc1.weight.data[:,0:3]=network.fc1.weight.data
+    network2.fc3.weight.data[0]=network.fc3.weight.data
+    network2.fc1.bias.data=network.fc1.bias.data
+    network2.fc3.bias.data[0]=network.fc3.bias.data
+    print(network.fc1.weight.data)
+    print(network.fc3.weight.data)
+    print(network2.fc1.weight.data)
+    print(network2.fc3.weight.data)
+    
     #a=network.parameters()
     #print(a)
     #test_network(network)

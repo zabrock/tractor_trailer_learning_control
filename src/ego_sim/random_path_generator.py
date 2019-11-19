@@ -81,5 +81,5 @@ if __name__ == "__main__":
 	import matplotlib.pyplot as plt
 	
 	rpg = RandomPathGenerator()
-	x, y = rpg.get_random_path(vel=5)
+	x, y, t, v = rpg.get_random_path()
 	plt.plot(x, y)

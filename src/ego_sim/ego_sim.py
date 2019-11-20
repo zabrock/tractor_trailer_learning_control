@@ -7,6 +7,7 @@ Created on Sat Oct 19 16:43:57 2019
 """
 import numpy as np
 from scipy.integrate import odeint
+from scipy import interpolate
 import copy
 
 class EgoSim(object):
@@ -65,6 +66,17 @@ class EgoSim(object):
 		P['Cs1'] = P['a1']*P['C1'] - P['b1']*(P['C2']+P['C3'])
 		P['Cq1'] = P['a1']**2*P['C1'] + P['b1']**2*(P['C2']+P['C3'])
 		self.P = P
+		
+	def modify_parameters(self,m1_alpha=1,m2_alpha=1,Csteer_alpha=1,Cdrive_alpha=1,Ctrailer_alpha=1):
+		'''
+		Modifies loading conditions and tire stiffness for the truck and trailer.
+		'''
+		self.P['m1'] = m1_alpha*9159.63
+		self.P['I1'] = m1_alpha*55660.3
+		self.P['m2'] = m2_alpha*27091.8
+		self.P['I2'] = m2_alpha*386841
+		
+		
 		
 	def calculate_mass_matrix(self):
 		'''

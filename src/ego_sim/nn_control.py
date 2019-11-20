@@ -1,32 +1,31 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Created on Tue Nov 19 16:05:39 2019
+
+@author: Zeke
+"""
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
 Created on Wed Nov  6 12:23:05 2019
 
 @author: Zeke
 """
 import numpy as np
 
-class StanleyPID(object):
-	def __init__(self,k_crosstrack = {'P':20, 'I':2, 'D':5}, 
-			  k_heading = {'P':-0.5, 'I':0, 'D':0},
+class NNControl(object):
+	def __init__(self,
 			  control_lookahead = 50):
 		'''
-		Initialization for the Stanley method PID controller.
+		Initialization for a neural network controller.
 		
 		Inputs:
-			k_crosstrack: Dictionary containing gains for cross-track error. Must
-				contain entries for 'P' (proportional), 'I' (integral), and 'D'
-				(derivative) to function correctly.
-			k_heading: Dictionary containing gains for heading error. Must
-				contain entries for 'P' (proportional), 'I' (integral), and 'D'
-				(derivative) to function correctly.
 			control_lookahead: Number of points ahead of the previous closest 
 				point on the path that the controller looks to find the next
 				closest point. Used to handle paths that cross back on themselves.
 		'''
-		self.k_ct = k_crosstrack
-		self.k_hd = k_heading
 		self.err_int = np.zeros(2)
 		self.err_d1 = np.zeros(2)
 		self.diff_d1 = np.zeros(2)
@@ -74,9 +73,9 @@ class StanleyPID(object):
 		tau = 0.1 # Time constant for filtering discrete derivatives
 		err_diff = ((2*tau-Ts)/(2*tau+Ts))*self.diff_d1 + (2/(2*tau+Ts))*(err-self.err_d1)
 		self.err_int += (err+self.err_d1)/2
-		ctrl_delta = state[2] + self.k_hd['P']*err[1] + self.k_hd['I']*self.err_int[1] + \
-			self.k_hd['D']*err_diff[1] + np.arctan2(self.k_ct['P']*err[0] + \
-			self.k_ct['I']*self.err_int[0] + self.k_ct['D']*err_diff[0], ctrl_vel)
+		
+		### FEED THE ERROR, IT'S DERIVATIVE, AND INTEGRAL INTO THE NN HERE ###
+		### AND HAVE ctrl_delta AS THE NN'S OUTPUT ###
 			
 		# Age the data
 		self.t_d1 = t

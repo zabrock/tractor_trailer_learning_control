@@ -11,8 +11,10 @@ import numpy as np
 from numpy import cos, sin
 from ego_sim import EgoSim
 from stanley_pid import StanleyPID
+from stanley_pid import calc_path_error
 from random_path_generator import RandomPathGenerator
 import time
+import math
 
 
 def read_path_from_original_simpack_csv(file):
@@ -138,23 +140,27 @@ def random_path_test():
     print(truck_offtrack)
     plt.figure(1)
     plt.plot(range(len(ct_err)), ct_err, 'g')
+    plt.ylabel("ct_err")
     plt.figure(2)
     plt.plot(range(len(truck_offtrack)), truck_offtrack, 'b')
+    plt.ylabel("Off Track error")
     plt.figure(3)
     plt.plot(x_true, y_true, 'r--')
-    print("Execution time " +str(time.time() - start_time))
+    plt.plot(x, y, 'g--')
+    print("Execution time " + str(time.time() - start_time))
+    plt.figure(4)
+    plt.plot(range(len(trail_offtrack)), trail_offtrack)
     plt.show()
 
 
-def calc_off_tracking(x_front, y_front, th1, th2, P, x_path, y_path):
+def calc_off_tracking(x_front, y_front, th1, th2, P, path_x, path_y):
     # Preallocate
+    start_time = time.time()
     print("In")
     x_c_mat = []
     y_c_mat = []
     x_trail_mat = []
     y_trail_mat = []
-    ptk = np.zeros(2)
-    p_c = np.zeros(2)
 
     # Calculate the rear and trailer axle positions:
     for i in range(len(x_front)):
@@ -164,36 +170,29 @@ def calc_off_tracking(x_front, y_front, th1, th2, P, x_path, y_path):
         y_c_mat.append(y_c)
         x_trail = x_c - (P['l2']) * cos(th2[i])
         x_trail_mat.append(x_trail)
-        y_trail = y_front - (P['l2']) * sin(th2[i])
+        y_trail = y_c - (P['l2']) * sin(th2[i])
         y_trail_mat.append(y_trail)
-
-    # print(x_path, y_path)
-    # Find the distance between point on the front axel and path
-    path_mat = np.column_stack((x_path, y_path))
 
     truck_mindist_mat = []
     trail_mindist_mat = []
-    seg_truck_mat = []
-    seg_trail_mat = []
+
     for j in range(len(x_front)):
-        ptk[0], ptk[1] = x_front[j], y_front[j]
-        p_c[0], p_c[1] = x_c_mat[j], y_c_mat[j]
-        for i in range(len(path_mat) - 1):
-            # Truck Segment Error:
-            x = tuple(path_mat[i + 1][:] - path_mat[i][:])
-            y = tuple(path_mat[i][:] - ptk[:])
-            seg_dist_truck = np.linalg.norm(np.cross(x, y)) / np.linalg.norm(x)
-            seg_truck_mat.append(seg_dist_truck)
+        state_1 = [x_front[j], y_front[j], 0, th1[j], th2[j]]
+        dist_squared_truck = [(x_front[j] - x) ** 2 + (y_front[j] - y) ** 2
+                        for x, y in zip(path_x, path_y)]
+        I_min_truck = np.argmin(dist_squared_truck)
+        truck_mindist, _ = calc_path_error(state_1, path_x, path_y, I_min_truck)
 
-            z = tuple(path_mat[i][:] - p_c[:])
-            # Trailer Segment Error:
-            seg_dist_trail = np.linalg.norm(np.cross(x, z)) / np.linalg.norm(x)
-            seg_trail_mat.append(seg_dist_trail)
-        min_dist_truck = min(seg_truck_mat)
-        min_dist_trail = min(seg_trail_mat)
-        truck_mindist_mat.append(min_dist_truck)
-        trail_mindist_mat.append(min_dist_trail)
+        state_2 = [x_trail_mat[j], y_trail_mat[j], 0, th1[j], th2[j]]
+        dist_squared_trail = [(x_trail_mat[j] - x) ** 2 + (y_trail_mat[j] - y) ** 2
+                              for x, y in zip(path_x, path_y)]
+        I_min_trail = np.argmin(dist_squared_trail)
+        trail_mindist, _ = calc_path_error(state_2, path_x, path_y, I_min_trail)
 
+        truck_mindist_mat.append(truck_mindist)
+        trail_mindist_mat.append(trail_mindist)
+
+    print("Off track function time is " + str(time.time()-start_time))
     return truck_mindist_mat, trail_mindist_mat
 
 

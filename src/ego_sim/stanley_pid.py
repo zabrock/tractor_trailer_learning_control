@@ -168,9 +168,12 @@ def minimum_distance(v,w,p):
 	
 	# Project the point on the line segment to obtain the projected point
 	proj = project_point_on_segment(v,w,p)
-	# Take the cross product of the vector between the point and the projection and
-	# the normalized vector of the line segment; this returns the signed distance
-	return np.cross(p-proj, (w-v)/np.linalg.norm(w-v))
+	if np.array_equal(v,w):
+		return np.sqrt((p[0]-proj[0])**2 + (p[1]-proj[1])**2)
+	else:
+		# Take the cross product of the vector between the point and the projection and
+		# the normalized vector of the line segment; this returns the signed distance
+		return np.cross(p-proj, (w-v)/np.linalg.norm(w-v))
 
 def project_point_on_segment(v, w, p):
 	'''

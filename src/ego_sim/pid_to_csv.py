@@ -42,6 +42,10 @@ def random_path_pid(output_to_csv=True,csv_filename='random_path_pid.csv'):
 			   'Derivative of Heading Error':hd_err_diff}
 	df = pd.DataFrame(csv_output)
 	df.to_csv(csv_filename,index=False)
+	csv_output = {'Path x-coordinates':x_true,
+			   'Path y-coordinates':y_true}
+	df = pd.DataFrame(csv_output)
+	df.to_csv(csv_filename[:-4]+'_path.csv',index=False)
 	
 def generate_n_pid_csvs(n=10,csv_filename_base='random_path_pid'):
 	for i in range(0,n):
@@ -49,4 +53,4 @@ def generate_n_pid_csvs(n=10,csv_filename_base='random_path_pid'):
 		random_path_pid(csv_filename=csv_name)
 	
 if __name__ == "__main__":
-	generate_n_pid_csvs(n=50,csv_filename_base='random_path_pid_more_output')
+	generate_n_pid_csvs(n=100,csv_filename_base='random_path_pid_more_output')

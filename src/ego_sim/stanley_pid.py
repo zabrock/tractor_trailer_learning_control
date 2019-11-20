@@ -60,10 +60,9 @@ class StanleyPID(object):
 		# Note that this method assumes positive progress along the path at every time step
 		# since it only checks points ahead of the last closest index
 		dist_squared = [(state[0]-x)**2 + (state[1]-y)**2 
-				  for x,y in zip(path_x[self.last_closest_idx:self.last_closest_idx+self.ctrl_look],
-					 path_y[self.last_closest_idx:self.last_closest_idx+self.ctrl_look])]
+				  for x,y in zip(path_x,path_y)]
 		
-		I_min = self.last_closest_idx + np.argmin(dist_squared)
+		I_min = np.argmin(dist_squared)
 		# Get the desired velocity at the closest point
 		ctrl_vel = path_vel[I_min]
 		# Find cross-track and heading error between the current ppsition and desired path
@@ -77,6 +76,12 @@ class StanleyPID(object):
 		ctrl_delta = state[2] + self.k_hd['P']*err[1] + self.k_hd['I']*self.err_int[1] + \
 			self.k_hd['D']*err_diff[1] + np.arctan2(self.k_ct['P']*err[0] + \
 			self.k_ct['I']*self.err_int[0] + self.k_ct['D']*err_diff[0], ctrl_vel)
+			
+		# Limit the steer angle command
+		if ctrl_delta > 2*np.pi/5:
+			ctrl_delta = 2*np.pi/5
+		elif ctrl_delta < -2*np.pi/5:
+			ctrl_delta = -2*np.pi/5
 			
 		# Age the data
 		self.t_d1 = t

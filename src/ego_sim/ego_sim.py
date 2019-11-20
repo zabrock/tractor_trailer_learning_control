@@ -182,6 +182,9 @@ class EgoSim(object):
 		# Calculate absolute orientation of the trailer
 		self.world_state[4] = self.world_state[3] + self.truck_state[3]
 		
+		# Output steer angle
+		self.world_state[2] = ctrl[1]
+		
 	def convert_world_state_to_front(self):
 		'''
 		Outputs the world state with the truck coordinate frame placed on the front

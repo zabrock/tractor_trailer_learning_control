@@ -71,7 +71,8 @@ def pid_test():
 	x_true,y_true,t,vel,steer_angle = read_path_from_original_simpack_csv('/Users/Zeke/Documents/MATLAB/Model Validation/P4_TCO_Sleeper__FE17_Trailer/SScorner_var_spd/left/Benchmark_SScorner_80m_left_pandas.csv')
 	
 	ego = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
-	pid = StanleyPID()
+	pid = StanleyPID(k_crosstrack = {'P':5, 'I':0.1, 'D':0.1}, 
+			  k_heading = {'P':-0.5, 'I':0, 'D':0})
 
 	x = []
 	y = []
@@ -93,7 +94,8 @@ def random_path_test():
 	rpg = RandomPathGenerator()
 	x_true, y_true, t, vel = rpg.get_random_path()
 	ego = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
-	pid = StanleyPID()
+	pid = StanleyPID(k_crosstrack = {'P':5, 'I':0.1, 'D':0.5}, 
+			  k_heading = {'P':-0.5, 'I':0, 'D':0})
 	
 
 	x = []

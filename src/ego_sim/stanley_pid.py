@@ -73,7 +73,10 @@ class StanleyPID(object):
 		tau = 0.1 # Time constant for filtering discrete derivatives
 		err_diff = ((2*tau-Ts)/(2*tau+Ts))*self.diff_d1 + (2/(2*tau+Ts))*(err-self.err_d1)
 		self.err_int += (err+self.err_d1)/2
-		ctrl_delta = state[2] + self.k_hd['P']*err[1] + self.k_hd['I']*self.err_int[1] + \
+#		ctrl_delta = state[2] + self.k_hd['P']*err[1] + self.k_hd['I']*self.err_int[1] + \
+#			self.k_hd['D']*err_diff[1] + np.arctan2(self.k_ct['P']*err[0] + \
+#			self.k_ct['I']*self.err_int[0] + self.k_ct['D']*err_diff[0], ctrl_vel)
+		ctrl_delta = self.k_hd['P']*err[1] + self.k_hd['I']*self.err_int[1] + \
 			self.k_hd['D']*err_diff[1] + np.arctan2(self.k_ct['P']*err[0] + \
 			self.k_ct['I']*self.err_int[0] + self.k_ct['D']*err_diff[0], ctrl_vel)
 			
@@ -90,6 +93,33 @@ class StanleyPID(object):
 		self.last_closest_idx = I_min
 		
 		return ctrl_delta, ctrl_vel, err, self.err_int, err_diff
+	
+	def control_from_random_error(self,ct_err_width=500,ct_int_width=1000,hd_int_width=100,ct_diff_width=20,hd_diff_width=5):
+		'''
+		Calculates what the Stanley PID control signal would be for a random cross-tracking
+		error and heading error, integral error, and derivative error.
+		'''
+		ct_err = 2*ct_err_width*np.random.random() - ct_err_width
+		hd_err = 2*np.pi*np.random.random() - np.pi
+		ct_int = 2*ct_int_width*np.random.normal() - ct_int_width
+		ct_diff = 2*ct_diff_width*np.random.normal() - ct_diff_width
+		hd_int = 2*hd_int_width*np.random.normal() - hd_int_width
+		hd_diff = 2*hd_diff_width*np.random.normal() - hd_diff_width
+		
+		ctrl_vel = 30*np.random.random() + 1
+		
+		ctrl_delta = self.k_hd['P']*hd_err + self.k_hd['I']*hd_int + \
+				self.k_hd['D']*hd_diff + np.arctan2(self.k_ct['P']*ct_err + \
+				self.k_ct['I']*ct_int + self.k_ct['D']*ct_diff, ctrl_vel)
+				
+		# Limit the steer angle command
+		if ctrl_delta > 2*np.pi/5:
+			ctrl_delta = 2*np.pi/5
+		elif ctrl_delta < -2*np.pi/5:
+			ctrl_delta = -2*np.pi/5
+				
+		output = [ct_err, hd_err, ctrl_vel, ctrl_delta, ct_int, hd_int, ct_diff, hd_diff]
+		return output
 		
 def calc_path_error(state,path_x,path_y,I_min):
 	'''
@@ -126,7 +156,8 @@ def calc_path_error(state,path_x,path_y,I_min):
 	# from the reverse closest point to the forward closest point
 	tan_vec = closest_pt_fwd - closest_pt_rev
 	path_angle = np.arctan2(tan_vec[1],tan_vec[0])
-	heading_error = wrap_to_pi(state[2] + state[3] - path_angle)
+#	heading_error = wrap_to_pi(state[2] + state[3] - path_angle)
+	heading_error = wrap_to_pi(state[3] - path_angle)
 	
 	return ct_error, heading_error
 	
@@ -216,3 +247,7 @@ def wrap_to_pi(angle):
 	if abs(wrap) > np.pi:
 		wrap -= 2*np.pi * np.sign(wrap)
 	return wrap
+
+
+pid = StanleyPID()
+print(pid.control_from_random_error())

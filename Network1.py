@@ -42,11 +42,11 @@ class Net1(nn.Module):
         #print('x: ',x)
        # x = x.view(-1, self.num_flat_features(x))
         #print(np.shape(x))
-        x = F.relu(self.fc1(x))  
+        x = torch.sigmoid(self.fc1(x))  
         #print(np.shape(x))
         #x = F.relu(self.fc2(x))
         #print(np.shape(x))
-        x = self.fc3(x)
+        x = torch.sigmoid(self.fc3(x))*np.pi-np.pi/2
         #print(np.shape(x))
         return x
   
@@ -115,7 +115,7 @@ def test_network(network):
     plt.show()
  
     
-def train_network(network):
+def train_network(network): 
     rpg = RandomPathGenerator()
     x_true, y_true, t, vel = rpg.get_random_path()
     ego = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
@@ -129,10 +129,13 @@ def train_network(network):
     th2 = []
     running_loss=0
     for i in range(0,len(t)):
+        
         network=network.float()
         state = ego.convert_world_state_to_front()
         ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, network)
         ctrl_delta_pid, ctrl_vel_pid, err_pid, interr_pid, differr_pid = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
+        #print(err, interr, differr)
+        #print('network', ctrl_delta, ctrl_vel, 'pid', ctrl_delta_pid, ctrl_vel_pid)
         #print([ct,hd,vel])
         #network_inputs=ct
         #np.append(network_inputs,hd,vel)
@@ -177,7 +180,7 @@ def train_network(network):
 def main():
     network=Net1()
     network.zero_grad()
-    learning_rate = 0.1
+    learning_rate = 0.01
     network2=Net2()
     #PID_Data=np.random.rand(100,5)
     #print('PID',PID_Data)
@@ -189,10 +192,11 @@ def main():
     input1=np.concatenate((input1,input2), axis=1)
     #print(input1)
     target1=PID_Data[:,3]
-    
-    for i in range(50):
-        train_network(network)
-        '''for k in range(1):
+    for  k in range(5):
+        thing_range=list(range(50))
+        np.random.shuffle(thing_range)
+        total_loss=0
+        for i in thing_range:
             running_loss=0
             for j in range(len(PID_Data)):
                 #print(np.shape(input1))
@@ -205,31 +209,38 @@ def main():
                 network_target=torch.tensor(target1[j])
                 network_target=network_target.double()
                 network= network.double()
-                #print(network_input,network_target)
+                
                 out=network(network_input)
                 network.zero_grad()
                 criterion = nn.MSELoss()
                 loss = criterion(out, network_target)
                 loss.backward()
                 running_loss += loss.item()
+                #print(out.data,network_target.data, out.data-network_target.data)
                 #print(loss.item())
                 for f in network.parameters():
                     f.data.sub_(f.grad.data * learning_rate)
-            print('[%5d] loss: %.3f' %
-            (i + 1, running_loss))
-        PID_Data=pd.read_csv('random_path_pid_more_output_'+str(i)+'.csv',sep=',',header=0)
+            print('[%5d] loss: %.3f' % (i + 1, running_loss))
+            if running_loss >= 5:
+                input('press  enter')
+            total_loss+=running_loss
+            PID_Data=pd.read_csv('random_path_pid_more_output_'+str(i)+'.csv',sep=',',header=0)
         #print(PID_Data)
-        PID_Data=PID_Data.values
-        input1=PID_Data[:,0:3]
-        input2=PID_Data[:,4:]
-        input1=np.concatenate((input1,input2),axis=1)
+            np.random.shuffle(PID_Data)
+            PID_Data=PID_Data.values
+            input1=PID_Data[:,0:3]
+            input2=PID_Data[:,4:]
+            input1=np.concatenate((input1,input2),axis=1)
         #print(input1)
-        target1=PID_Data[:,3]
+            target1=PID_Data[:,3]
+        print('total loss this set: ', total_loss)
         #print('[%5d] loss: %.3f' %
         #(i + 1, running_loss))
-        '''
+        
     running_loss = 0.0
     network=network.float()
+    for i  in range(10):
+        train_network(network)
     test_network(network)
     '''
     network2.fc1.weight.data[:,0:3]=network.fc1.weight.data

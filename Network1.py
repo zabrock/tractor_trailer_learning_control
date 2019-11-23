@@ -17,6 +17,7 @@ from src.ego_sim.ego_sim import EgoSim
 from src.ego_sim.stanley_pid import StanleyPID
 from src.ego_sim.nn_control import NNControl
 import matplotlib.pyplot as plt
+import csv
 
 class Net1(nn.Module):
 
@@ -27,8 +28,8 @@ class Net1(nn.Module):
         #self.conv1 = nn.Conv2d(1, 6, 3)
         #self.conv2 = nn.Conv2d(6, 16, 3)
         # an affine operation: y = Wx + b
-        self.fc1 = nn.Linear(7, 5)  # 6*6 from image dimension
-        #self.fc2 = nn.Linear(10, 5)
+        self.fc1 = nn.Linear(7, 10)  # 6*6 from image dimension
+        self.fc2 = nn.Linear(10, 5)
         self.fc3 = nn.Linear(5, 1)
 
     def forward(self, x):
@@ -42,11 +43,11 @@ class Net1(nn.Module):
         #print('x: ',x)
        # x = x.view(-1, self.num_flat_features(x))
         #print(np.shape(x))
-        x = torch.sigmoid(self.fc1(x))  
+        x = torch.sigmoid(self.fc1(x))
         #print(np.shape(x))
-        #x = F.relu(self.fc2(x))
+        x = torch.sigmoid(self.fc2(x))
         #print(np.shape(x))
-        x = torch.sigmoid(self.fc3(x))*np.pi-np.pi/2
+        x = torch.sigmoid(self.fc3(x))*4/5*np.pi-2*np.pi/5
         #print(np.shape(x))
         return x
   
@@ -59,8 +60,8 @@ class Net2(nn.Module):
         #self.conv1 = nn.Conv2d(1, 6, 3)
         #self.conv2 = nn.Conv2d(6, 16, 3)
         # an affine operation: y = Wx + b
-        self.fc1 = nn.Linear(11, 5)  # 6*6 from image dimension
-        #self.fc2 = nn.Linear(10, 5)
+        self.fc1 = nn.Linear(11, 10)  # 6*6 from image dimension
+        self.fc2 = nn.Linear(10, 5)
         self.fc3 = nn.Linear(5, 2)
 
     def forward(self, x):
@@ -128,6 +129,36 @@ def train_network(network):
     th1 = []
     th2 = []
     running_loss=0
+    #do some  random stuff
+    for i in range(100000):
+        #network=network.float()
+        #state = ego.convert_world_state_to_front() 
+        #ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, network)
+        pid_list=pid.control_from_random_error()
+        input1=pid_list[0:3]
+        input2=pid_list[4:]
+        input1=np.concatenate((input1,input2), axis=0)
+        #print(input1)
+        target1=pid_list[3]
+        network_input=torch.tensor(input1)
+        #print(network_input)
+        network_target=torch.tensor(target1)
+        network_target=network_target.double()
+        network= network.double()
+        #print(network_input)
+        out=network(network_input)
+        network.zero_grad()
+        criterion = nn.MSELoss()
+        loss = criterion(out, network_target)
+        loss.backward()
+        running_loss += loss.item()
+        #print(out.data,network_target.data, out.data-network_target.data)
+        #print(loss.item())
+        for f in network.parameters():
+            f.data.sub_(f.grad.data * learning_rate)
+    print(running_loss)
+    #follow the path
+    running_loss=0
     for i in range(0,len(t)):
         
         network=network.float()
@@ -146,6 +177,7 @@ def train_network(network):
         #print([ctrl_delta,ctrl_vel])
         xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
         x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
+
                 #print(np.shape(input1))
         #print(network.parameters())
         #print(network.fc1.weight.data)
@@ -164,6 +196,8 @@ def train_network(network):
         network= network.double()
         #print(network_input,network_target)
         out=network(network_input)
+        #if (i >50) &  (i < 100):
+        #print(out)
         network.zero_grad()
         criterion = nn.MSELoss()
         loss = criterion(out, network_target)
@@ -179,6 +213,7 @@ def train_network(network):
 
 def main():
     network=Net1()
+    #print(network.fc1.weight.detach().numpy())
     network.zero_grad()
     learning_rate = 0.01
     network2=Net2()
@@ -187,11 +222,13 @@ def main():
     PID_Data=pd.read_csv('random_path_pid_more_output_0.csv',sep=',',header=0)
     #print(PID_Data)
     PID_Data=PID_Data.values
+    np.random.shuffle(PID_Data)
     input1=PID_Data[:,0:3]
     input2=PID_Data[:,4:]
     input1=np.concatenate((input1,input2), axis=1)
     #print(input1)
     target1=PID_Data[:,3]
+    '''$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
     for  k in range(5):
         thing_range=list(range(50))
         np.random.shuffle(thing_range)
@@ -221,14 +258,15 @@ def main():
                 for f in network.parameters():
                     f.data.sub_(f.grad.data * learning_rate)
             print('[%5d] loss: %.3f' % (i + 1, running_loss))
-            if running_loss >= 5:
-                input('press  enter')
+            #if running_loss >= 5:
+                #input('press  enter')
             total_loss+=running_loss
             PID_Data=pd.read_csv('random_path_pid_more_output_'+str(i)+'.csv',sep=',',header=0)
         #print(PID_Data)
-            np.random.shuffle(PID_Data)
+            
             PID_Data=PID_Data.values
-            input1=PID_Data[:,0:3]
+            np.random.shuffle(PID_Data)
+            input1=PID_Data[:,0:2]
             input2=PID_Data[:,4:]
             input1=np.concatenate((input1,input2),axis=1)
         #print(input1)
@@ -236,23 +274,41 @@ def main():
         print('total loss this set: ', total_loss)
         #print('[%5d] loss: %.3f' %
         #(i + 1, running_loss))
-        
+    '''    
     running_loss = 0.0
     network=network.float()
     for i  in range(10):
         train_network(network)
-    test_network(network)
+        j=input('is this good enough? 1 for yes  0 for no')
+        print(j)
+        if j =='1':
+            break
+    
     '''
-    network2.fc1.weight.data[:,0:3]=network.fc1.weight.data
+    with open('weights.csv', mode='w') as weights:
+        weight_writer = csv.writer(weights, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+        weight_writer.writerow(network.fc1.weight.detach().numpy())
+        weight_writer.writerow(network.fc1.bias.detach().numpy())
+        weight_writer.writerow(network.fc2.weight.detach().numpy())
+        weight_writer.writerow(network.fc2.bias.detach().numpy())
+        weight_writer.writerow(network.fc3.weight.detach().numpy())
+        weight_writer.writerow(network.fc3.bias.detach().numpy())
+    '''
+    #test_network(network)
+    
+    network2.fc1.weight.data[:,0:8]=network.fc1.weight.data
+    network2.fc2.weight.data=network.fc2.weight.data
     network2.fc3.weight.data[0]=network.fc3.weight.data
     network2.fc1.bias.data=network.fc1.bias.data
+    network2.fc2.bias.data=network.fc2.bias.data
     network2.fc3.bias.data[0]=network.fc3.bias.data
     print(network.fc1.weight.data)
     print(network.fc3.weight.data)
     print(network2.fc1.weight.data)
     print(network2.fc3.weight.data)
     #controller=NNControl()
-   ''' 
+   
     #controller.calc_steer_control(t,state,path_x,path_y,path_vel,network)
     #a=network.parameters()
     #print(a)

@@ -6,6 +6,9 @@ Created on Fri Nov  8 14:32:11 2019
 @author: Zeke
 """
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
 
 class RandomPathGenerator(object):
 	def __init__(self):
@@ -21,6 +24,20 @@ class RandomPathGenerator(object):
 		'''
 		self.accel_lim_x = [0,1,3,5,7,11,18,23,25,27,31,33,35]
 		self.accel_lim_y = [0,0.25,1.3,3,4.5,5,5.2,4.5,4.6,4.6,4.2,4.2,4]
+		
+	def plot_lateral_accel_limits(self):
+		'''
+		Plots the lateral acceleration limits that the random path adheres to.
+		'''
+		plt.fill_between(self.accel_lim_x,self.accel_lim_y,-np.array(self.accel_lim_y),color='lightseagreen')
+		plt.plot(self.accel_lim_x,self.accel_lim_y,'r')
+		plt.plot(self.accel_lim_x,-np.array(self.accel_lim_y),'r')
+		legend_elements = [Line2D([0], [0], color='r', lw=4, label='Stability limits'),
+					 Patch(facecolor='lightseagreen', label='Stable region')]
+		plt.legend(handles=legend_elements,loc="upper right")
+		plt.xlabel('Truck velocity (m/s)')
+		plt.ylabel('Maximum lateral acceleration ($m/s^2$)')
+		plt.show()
 		
 	def get_random_path(self, end_time=40, delta_t=0.02, vel=None):
 		'''
@@ -78,8 +95,11 @@ class RandomPathGenerator(object):
 		return x, y, t, vel*np.ones(len(t))
 			
 if __name__ == "__main__":
-	import matplotlib.pyplot as plt
-	
 	rpg = RandomPathGenerator()
 	x, y, t, v = rpg.get_random_path()
 	plt.plot(x, y)
+	plt.xlabel('x (m)')
+	plt.ylabel('y (m)')
+	plt.title('Random path, velocity = {0:.2f} m/s'.format(v[0]))
+	plt.show()
+	rpg.plot_lateral_accel_limits()

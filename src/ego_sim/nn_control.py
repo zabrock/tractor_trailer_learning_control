@@ -80,7 +80,7 @@ class NNControl(object):
         stuff=list(err)
         stuff2=list(err_diff)
         stuff3=list(self.err_int)
-        ctrl_delta=network(torch.tensor([float(stuff[0]),float(stuff[1]),float(stuff2[0]),float(stuff2[1]),float(stuff3[0]),float(stuff3[1]),float(ctrl_vel)]))
+        ctrl_delta=network(torch.tensor([float(stuff[0]),float(stuff[1]),ctrl_vel,float(stuff2[0]),float(stuff2[1]),float(stuff3[0]),float(stuff3[1])]))
         #print(ctrl_vel, path_vel)
         ctrl_delta=ctrl_delta.data.numpy()
         ctrl_delta=np.asscalar(ctrl_delta)
@@ -174,9 +174,12 @@ def minimum_distance(v,w,p):
     
     # Project the point on the line segment to obtain the projected point
     proj = project_point_on_segment(v,w,p)
-    # Take the cross product of the vector between the point and the projection and
-    # the normalized vector of the line segment; this returns the signed distance
-    return np.cross(p-proj, (w-v)/np.linalg.norm(w-v))
+    if np.array_equal(v,w):
+        return np.sqrt((p[0]-proj[0])**2 + (p[1]-proj[1])**2)
+    else:
+        # Take the cross product of the vector between the point and the projection and
+        # the normalized vector of the line segment; this returns the signed distance
+        return np.cross(p-proj, (w-v)/np.linalg.norm(w-v))
 
 def project_point_on_segment(v, w, p):
     '''

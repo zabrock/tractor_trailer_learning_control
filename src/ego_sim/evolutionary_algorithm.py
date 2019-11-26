@@ -10,6 +10,7 @@ import copy
 from stanley_pid import StanleyPID
 from ego_sim import EgoSim
 from random_path_generator import RandomPathGenerator
+from Min_dist_test import calc_off_tracking
 import random
 
 class EvolutionaryAlgorithm(object):
@@ -38,7 +39,10 @@ class EvolutionaryAlgorithm(object):
 		'''
 		Evaluates and returns the fitness of all controllers in pool
 		'''
-		pass
+		
+		
+		
+		fitness = calc_off_tracking(x_front, y_front, th1, th2, P, path_x, path_y)
 	
 	def iterate(self,epsilon=0.1):
 		# Pick a network to modify using the epsilon-greedy method

@@ -103,7 +103,7 @@ def pid_test():
         th1.append(th1t)
         th2.append(th2t)
 
-    plt.plot(x, y)
+    plt.plot(x, y, 'y')
     plt.plot(x_true, y_true, 'r--')
     plt.show()
 
@@ -120,37 +120,31 @@ def random_path_test():
     delta = []
     th1 = []
     th2 = []
-    ct_err = []
-    deltat = 0
 
     for i in range(0, len(t)):
         xt, yt, er, th1t, th2t = 0, 0, 0, 0, 0
         state = ego.convert_world_state_to_front()
-        ctrl_delta, ctrl_vel, ct, hd = pid.calc_steer_control(t[i], state, x_true, y_true, vel)
+        ctrl_delta, ctrl_vel, err, err_int, err_diff = pid.calc_steer_control(t[i], state, x_true, y_true, vel)
         xt, yt, er, th1t, th2t = ego.simulate_timestep([ctrl_vel, ctrl_delta])
         x.append(xt)
         y[i] = yt
         delta.append(er)
         th1.append(th1t)
         th2.append(th2t)
-        ct_err.append(ct)
 
     truck_offtrack, trail_offtrack = calc_off_tracking(x, y, th1, th2, ego.P, x_true, y_true)
-    #print(ct_err)
-    print(truck_offtrack)
+
     plt.figure(1)
-    plt.plot(range(len(ct_err)), ct_err, 'g')
-    plt.ylabel("ct_err")
-    plt.figure(2)
     plt.plot(range(len(truck_offtrack)), truck_offtrack, 'b')
+    plt.ylabel("Off Track error")
+    plt.figure(2)
+    plt.plot(range(len(trail_offtrack)), trail_offtrack, 'g')
     plt.ylabel("Off Track error")
     plt.figure(3)
     plt.plot(x_true, y_true, 'r--')
     plt.plot(x, y, 'g--')
-    print("Execution time " + str(time.time() - start_time))
-    plt.figure(4)
-    plt.plot(range(len(trail_offtrack)), trail_offtrack)
     plt.show()
+    print("Execution time " + str(time.time() - start_time))
 
 
 def calc_off_tracking(x_front, y_front, th1, th2, P, path_x, path_y):
@@ -191,6 +185,15 @@ def calc_off_tracking(x_front, y_front, th1, th2, P, path_x, path_y):
 
         truck_mindist_mat.append(truck_mindist)
         trail_mindist_mat.append(trail_mindist)
+
+    err_truck = np.square(truck_mindist_mat)
+    sqrd_err_truck = np.sum(err_truck)
+
+    err_trail = np.square(trail_mindist_mat)
+    sqrd_err_trail = np.sum(err_trail)
+
+    mean_sqrd_error = ((sqrd_err_truck/(len(truck_mindist_mat))) + (sqrd_err_trail/(len(truck_mindist_mat))))/2
+    print("Mean square error is  " + str(mean_sqrd_error))
 
     print("Off track function time is " + str(time.time()-start_time))
     return truck_mindist_mat, trail_mindist_mat

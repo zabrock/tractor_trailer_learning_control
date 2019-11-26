@@ -34,6 +34,16 @@ class NNControl(object):
         self.last_closest_idx = 0
         self.t_d1 = 0
         
+    def reset(self):
+        '''
+        Resets the integral and derivative terms
+        '''
+        self.err_int = np.zeros(2)
+        self.err_d1 = np.zeros(2)
+        self.diff_d1 = np.zeros(2)
+        self.last_closest_idx = 0
+        self.t_d1 = 0
+        
     def calc_steer_control(self,t,state,path_x,path_y,path_vel,network):
         '''
         Calculates steering control given a path and current state.

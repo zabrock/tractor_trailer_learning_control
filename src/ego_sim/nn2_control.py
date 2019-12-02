@@ -140,6 +140,42 @@ def calc_path_error(state,path_x,path_y,I_min):
     heading_error = wrap_to_pi(state[2] + state[3] - path_angle)
     
     return ct_error, heading_error
+
+def calc_trailer_error(state,path_x,path_y):
+    '''
+    Inputs:
+        state: numpy array containing [x_front, y_front, delta, theta1, theta2] which represent, as follows:
+            x_front: x-coordinate of current front axle location in world coordinates
+            y_front: y-coordinate of current front axle location in world coordinates
+            delta: current steer tire angle relative to vehicle (radians)
+            theta1: absolute orientation of truck in world coordinates (radians)
+            theta2: absolute orientation of trailer in world coordinates (radians)
+        path_x: Array of x-coordinates for points that discretize the desired path
+        path_y: Array of y-coordinates for points that discretize the desired path
+    '''
+            
+    x_trail = state[0] - 5.51*np.cos(state[3]) - 11.4847*np.cos(state[4])
+    y_trail = state[1] - 5.51*np.sin(state[3]) - 11.4847*np.sin(state[4])
+    dist_squared = [(x_trail-x)**2 + (y_trail-y)**2 for x,y in zip(path_x, path_y)]
+    I_min = np.argmin(dist_squared)
+    
+    # Start by determining closest three points on the desired path curve
+    closest_pt = np.array([path_x[I_min],path_y[I_min]])
+    if I_min > 0:
+        closest_pt_rev = np.array([path_x[I_min-1],path_y[I_min-1]])
+    else:
+        closest_pt_rev = closest_pt
+    if I_min < len(path_x)-1:
+        closest_pt_fwd = np.array([path_x[I_min+1],path_y[I_min+1]])
+    else:
+        closest_pt_fwd = closest_pt
+        
+    # Get the cross track error by finding minimum distance from the line
+    # segments defined by these three points
+    ct_error = path_distance(closest_pt_rev, closest_pt, closest_pt_fwd, np.array([x_trail,y_trail]))
+    
+    return ct_error
+        
     
 def path_distance(path_pt_rev, path_pt, path_pt_fwd, cur_point):
     '''

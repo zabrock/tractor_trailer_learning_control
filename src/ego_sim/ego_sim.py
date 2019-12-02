@@ -209,3 +209,31 @@ def canonical_ode(y, t, M, A, B, u):
 	'''
 	dydt = np.matmul(np.linalg.inv(M)*A,y) + np.matmul(np.linalg.inv(M),B)*u
 	return dydt.A1
+
+def sinusoid_input():
+	ego = EgoSim()
+	x = []
+	y = []
+	delta = []
+	th1 = []
+	th2 = []
+	t = np.arange(0,20,step=0.02)
+	ctrl_vel = 31
+	for i in range(0,len(t)):
+		ctrl_delta = 2*np.pi*np.sin(t[i]*3.5)/5
+		xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+		x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
+		
+	
+	return x, y
+
+if __name__ == "__main__":
+	x, y = sinusoid_input()
+	import matplotlib.pyplot as plt
+	plt.plot(x,y)
+	plt.gca().set_aspect('equal', adjustable='box')
+	
+	import pandas as pd
+	df = pd.DataFrame({'x':x,'y':y})
+	df.to_csv('test_path.csv')
+	

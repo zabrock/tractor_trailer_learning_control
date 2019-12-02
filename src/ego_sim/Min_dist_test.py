@@ -55,7 +55,7 @@ def calc_off_tracking(x_front, y_front, th1, th2, P, path_x, path_y):
     err_trail = np.square(trail_mindist_mat)
     sqrd_err_trail = np.sum(err_trail)
 
-    return sqrd_err_truck + sqrd_err_trail
+    return sqrd_err_truck + sqrd_err_trail, err_trail
 #    print("Mean square error is  " + str(mean_sqrd_error))
 
 #    print("Off track function time is " + str(time.time()-start_time))

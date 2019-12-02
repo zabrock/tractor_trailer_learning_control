@@ -94,7 +94,7 @@ class StanleyPID(object):
 		
 		return ctrl_delta, ctrl_vel, err, self.err_int, err_diff
 	
-	def control_from_random_error(self,ct_err_width=100,ct_int_width=200,hd_int_width=20,ct_diff_width=5,hd_diff_width=1):
+	def control_from_random_error(self,ct_err_width=50,ct_int_width=100,hd_int_width=10,ct_diff_width=3,hd_diff_width=1):
 		'''
 		Calculates what the Stanley PID control signal would be for a random cross-tracking
 		error and heading error, integral error, and derivative error.

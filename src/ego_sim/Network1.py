@@ -58,7 +58,7 @@ class Net2(nn.Module):
         #self.conv1 = nn.Conv2d(1, 6, 3)
         #self.conv2 = nn.Conv2d(6, 16, 3)
         # an affine operation: y = Wx + b
-        self.fc1 = nn.Linear(9, 10)  # 6*6 from image dimension
+        self.fc1 = nn.Linear(8, 10)  # 6*6 from image dimension
         self.fc2 = nn.Linear(10, 5)
         self.fc3 = nn.Linear(5, 1)
 
@@ -73,11 +73,11 @@ class Net2(nn.Module):
         #print('x: ',x)
        # x = x.view(-1, self.num_flat_features(x))
         #print(np.shape(x))
-        x = F.relu(self.fc1(x))
+        x = torch.sigmoid(self.fc1(x))
         #print(np.shape(x))
-        #x = F.relu(self.fc2(x))
+        x = torch.sigmoid(self.fc2(x))
         #print(np.shape(x))
-        x = self.fc3(x)
+        x = torch.sigmoid(self.fc3(x))*4/5*np.pi-2*np.pi/5
         #print(np.shape(x))
         return x
 
@@ -431,7 +431,10 @@ def main():
         #(i + 1, running_loss))
     '''   
 
-    running_loss = 0.0
+    #running_loss = 0.0
+    
+    
+    '''
     network=network.float()
     for i  in range(10):
         train_network(network)
@@ -441,6 +444,9 @@ def main():
             break
     b=time.process_time()
     print(a-b)
+    '''
+    
+    
     '''
     with open('weights.csv', mode='w') as weights:
         weight_writer = csv.writer(weights, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -467,6 +473,7 @@ def main():
     
     evolution=EvolutionaryAlgorithm(network2)
     for i in range(100):
+        print(i)
         evolution.iterate()
     #controller=NNControl()
    

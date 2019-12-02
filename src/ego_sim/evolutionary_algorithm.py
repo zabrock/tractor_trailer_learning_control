@@ -17,7 +17,10 @@ import random
 
 class EvolutionaryAlgorithm(object):
     def __init__(self,nn_controller,pop_size=10,pct_weight_variation=0.2):
-        
+        # Save number of controllers to keep through each iteration
+        self.pop_size = pop_size
+        # Save the percent weight variation to use when permutating controllers
+        self.pct_weight_var = pct_weight_variation
         # Initialize population of controllers randomly perturbed from the input controller
         self.controllers = [self.permutate_controller(nn_controller) for i in range(0,pop_size-1)]
         self.controllers.append(nn_controller)
@@ -25,11 +28,7 @@ class EvolutionaryAlgorithm(object):
         
         # Save the best controller's index
         self.best_controller_idx = np.argmin(fitnesses)
-        
-        # Save number of controllers to keep through each iteration
-        self.pop_size = pop_size
-        # Save the percent weight variation to use when permutating controllers
-        self.pct_weight_var = pct_weight_variation
+    
         
     def permutate_controller(self,nn_controller):
         '''
@@ -37,32 +36,35 @@ class EvolutionaryAlgorithm(object):
         '''
         #modify the weights of the 1st layer
         #nn_controller2=nn_controller.deepcopy()
-        temp=len(nn_controller.fc1.weight.data)
+        #print('nn_weight data',nn_controller.fc1.weight.data)
+        #print('nn_weight data len',len(nn_controller.fc1.weight.data))
+        #print('nn_weight data',nn_controller.fc1.weight.data)
+        temp=list(nn_controller.fc1.weight.data.shape)
         weight_add=torch.rand(temp)
         weight_add=weight_add/sum(weight_add)
         nn_controller.fc1.weight.data=nn_controller.fc1.weight.data+weight_add*self.pct_weight_var
         #modify the weights of the 2nd layer
-        temp=len(nn_controller.fc2.weight.data)
+        temp=list(nn_controller.fc2.weight.data.shape)
         weight_add=torch.rand(temp)
         weight_add=weight_add/sum(weight_add)
         nn_controller.fc2.weight.data=nn_controller.fc2.weight.data+weight_add*self.pct_weight_var
         #modify the weights of the 3rd layer
-        temp=len(nn_controller.fc3.weight.data)
+        temp=list(nn_controller.fc3.weight.data.shape)
         weight_add=torch.rand(temp)
         weight_add=weight_add/sum(weight_add)
         nn_controller.fc3.weight.data=nn_controller.fc3.weight.data+weight_add*self.pct_weight_var
         #modify the biases of the 1st layer
-        temp=len(nn_controller.fc1.bias.data)
+        temp=list(nn_controller.fc1.bias.data.shape)
         weight_add=torch.rand(temp)
         weight_add=weight_add/sum(weight_add)
         nn_controller.fc1.bias.data=nn_controller.fc1.bias.data+weight_add*self.pct_weight_var
         #modify the biases of the 2nd layer
-        temp=len(nn_controller.fc2.bias.data)
+        temp=list(nn_controller.fc2.bias.data.shape)
         weight_add=torch.rand(temp)
         weight_add=weight_add/sum(weight_add)
         nn_controller.fc2.bias.data=nn_controller.fc2.bias.data+weight_add*self.pct_weight_var
         #modify the biases of the 3rd layer
-        temp=len(nn_controller.fc3.bias.data)
+        temp=list(nn_controller.fc3.bias.data.shape)
         weight_add=torch.rand(temp)
         weight_add=weight_add/sum(weight_add)
         nn_controller.fc3.bias.data=nn_controller.fc3.bias.data+weight_add*self.pct_weight_var
@@ -76,25 +78,36 @@ class EvolutionaryAlgorithm(object):
         '''
         rpg=RandomPathGenerator()
         controller = NN2Control()
-        x_true, y_true, t, vel=rpg.get_random_path()
+        x_true, y_true, t, vel=rpg.get_random_path(end_time=10)
+        x_truck=[]
+        y_truck=[]
         self.controller_fitness=np.zeros(len(self.controllers))
+        th1t=0
+        th2t=0
+        th1=[]
+        th2=[]
         for i in range(len(self.controllers)):
             ego=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+            print('controller: ', i)
+            th1t=0
+            th2t=0
+            th1=[]
+            th2=[]
+            x_truck=[]
+            y_truck=[]
             for j in range(len(t)):
                 state = ego.convert_world_state_to_front()
-                ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, self.controllers[i])
+                ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t, self.controllers[i])
                 xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
-                inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
-                network_input=torch.tensor(inputs)
-                out=self.controllers[i](network_input)
-                fitness, _ = calc_off_tracking(xt, yt, th1t, th2t, P, x_true, y_true)   # WHAT IS P? fix so that  this works
-                self.controller_fitness[i]+=fitness
+                x_truck.append(xt)
+                y_truck.append(yt)
+                th1.append(th1t)
+                th2.append(th2t)
+                #inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
+                #network_input=torch.tensor(inputs)
+                #out=self.controllers[i](network_input)
                 #x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
-             
-        
-        
-        
-        
+            self.controller_fitness[i], CTerr = calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
         
     
     def iterate(self,epsilon=0.1):
@@ -108,7 +121,8 @@ class EvolutionaryAlgorithm(object):
         # Randomly modify the network parameters and add it to the pool
         new_ctrlr = self.permutate_controller(new_ctrlr)
         self.controllers.append(new_ctrlr)
-        self.fitnesses.append(0)
+        print(self.controller_fitness)
+        self.controller_fitness.append(0)
         # Evaluate fitness of all controllers on a randomly generated path
         self.evaluate_fitness()
         # Select next generation from pool
@@ -126,3 +140,5 @@ class EvolutionaryAlgorithm(object):
         '''
         worst_controller=np.argmax(self.controller_fitness)
         self.controllers.pop(worst_controller)
+        
+        

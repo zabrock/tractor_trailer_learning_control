@@ -44,7 +44,7 @@ class NN2Control(object):
         self.last_closest_idx = 0
         self.t_d1 = 0
         
-    def calc_steer_control(self,t,state,path_x,path_y,path_vel,network):
+    def calc_steer_control(self,t,state,path_x,path_y,path_vel,HD2,network):
         '''
         Calculates steering control given a path and current state.
         
@@ -90,7 +90,7 @@ class NN2Control(object):
         stuff=list(err)
         stuff2=list(err_diff)
         stuff3=list(self.err_int)
-        ctrl_delta=network(torch.tensor([float(stuff[0]),float(stuff[1]),ctrl_vel,float(stuff2[0]),float(stuff2[1]),float(stuff3[0]),float(stuff3[1]),float(HD2),float(CT2)]))
+        ctrl_delta=network(torch.tensor([float(stuff[0]),float(stuff[1]),float(ctrl_vel),float(stuff2[0]),float(stuff2[1]),float(stuff3[0]),float(stuff3[1]),float(HD2)]))
         #print(ctrl_vel, path_vel)
         ctrl_delta=ctrl_delta.data.numpy()
         ctrl_delta=np.asscalar(ctrl_delta)

@@ -16,14 +16,15 @@ from random_path_generator import RandomPathGenerator
 from ego_sim import EgoSim
 from stanley_pid import StanleyPID
 from nn_control import NNControl
+from nn2_control import NN2Control
 import matplotlib.pyplot as plt
 import csv
 import time
 import math
 from evolutionary_algorithm import EvolutionaryAlgorithm
+from Min_dist_test import calc_off_tracking
 
 class Net1(nn.Module):
-
     def __init__(self):
         super(Net1, self).__init__()
         self.fc1 = nn.Linear(7, 10)  
@@ -58,7 +59,7 @@ class Net2(nn.Module):
         #self.conv1 = nn.Conv2d(1, 6, 3)
         #self.conv2 = nn.Conv2d(6, 16, 3)
         # an affine operation: y = Wx + b
-        self.fc1 = nn.Linear(9, 10)  # 6*6 from image dimension
+        self.fc1 = nn.Linear(8, 10)  # 6*6 from image dimension
         self.fc2 = nn.Linear(10, 5)
         self.fc3 = nn.Linear(5, 1)
 
@@ -73,11 +74,11 @@ class Net2(nn.Module):
         #print('x: ',x)
        # x = x.view(-1, self.num_flat_features(x))
         #print(np.shape(x))
-        x = F.relu(self.fc1(x))
+        x = torch.sigmoid(self.fc1(x))
         #print(np.shape(x))
-        #x = F.relu(self.fc2(x))
+        x = torch.sigmoid(self.fc2(x))
         #print(np.shape(x))
-        x = self.fc3(x)
+        x = torch.sigmoid(self.fc3(x))*4/5*np.pi-2*np.pi/5
         #print(np.shape(x))
         return x
 
@@ -227,11 +228,11 @@ def train_network(network):
         #for f in network.parameters():
         #    f.data.sub_(f.grad.data * learning_rate)
     print(running_loss)
-    plt.plot(x,y)
-    plt.plot(x_true,y_true,'r--')
-    plt.plot(xp,yp,'g--')
-    plt.legend(['Network Performance','True Path', 'PID Performance'])
-    plt.show()
+    #plt.plot(x,y)
+    #plt.plot(x_true,y_true,'r--')
+    #plt.plot(xp,yp,'g--')
+    #plt.legend(['Network Performance','True Path', 'PID Performance'])
+    #plt.show()
     running_loss=0
     x = []
     y = []
@@ -282,10 +283,10 @@ def train_network(network):
     print(running_loss)
     #follow the path
     running_loss=0
-    plt.plot(loss_time,MSE)
-    plt.xlabel('Data Number')
-    plt.ylabel('Average Fitness')
-    plt.show()
+    #plt.plot(loss_time,MSE)
+    #plt.xlabel('Data Number')
+    #plt.ylabel('Average Fitness')
+    #plt.show()
 
     #x_true, y_true, t, vel = rpg.get_random_path()
     ego = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
@@ -358,20 +359,25 @@ def train_network(network):
     plt.xlabel('Data Number')
     plt.ylabel('Average Loss of 500 samples')
     plt.show()
+    '''
     plt.plot(x,y)
     plt.plot(x_true,y_true,'r--')
     plt.plot(xp,yp,'g--')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
     plt.show()
-    '''
+    
 
 def main():
-    a=time.process_time()
     network=Net1()
     #print(network.fc1.weight.detach().numpy())
     network.zero_grad()
-    learning_rate = 0.01
     network2=Net2()
+    Benchmark1=pd.read_csv('Benchmark_DLC_31ms_reduced.csv',sep=',',header=0)
+    Benchmark1=Benchmark1.values
+    Benchmark2=pd.read_csv('Benchmark_SScorner_80m_left_reduced.csv',sep=',',header=0)
+    Benchmark2=Benchmark2.values
+    Benchmark3=pd.read_csv('Benchmark_SScorner_500m_left_25ms_reduced.csv',sep=',',header=0)
+    Benchmark3=Benchmark3.values
     #PID_Data=np.random.rand(100,5)
     #print('PID',PID_Data)
     #PID_Data=pd.read_csv('random_path_pid_more_output_0.csv',sep=',',header=0)
@@ -423,7 +429,7 @@ def main():
             np.random.shuffle(PID_Data)
             input1=PID_Data[:,0:2]
             input2=PID_Data[:,4:]
-            input1=np.concatenate((input1,input2),axis=1)
+            input1=np.concat enate((input1,input2),axis=1)
         #print(input1)
             target1=PID_Data[:,3]
         print('total loss this set: ', total_loss)
@@ -431,16 +437,30 @@ def main():
         #(i + 1, running_loss))
     '''   
 
-    running_loss = 0.0
+    #running_loss = 0.0
+    
+    
+    
     network=network.float()
+    for i in range(10):
+        train_network(network)
+        a=input('is this good enough?')
+        if a=='1':
+            break
+        
+    '''
     for i  in range(10):
         train_network(network)
         j=input('is this good enough? 1 for yes  0 for no')
-        print(j)
+        #print(j)
         if j =='1':
             break
     b=time.process_time()
-    print(a-b)
+    '''
+    #print(a-b)
+    
+    
+    
     '''
     with open('weights.csv', mode='w') as weights:
         weight_writer = csv.writer(weights, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -453,21 +473,322 @@ def main():
         weight_writer.writerow(network.fc3.bias.detach().numpy())
     '''
     #test_network(network)
-    
+    network=network.double()
     network2.fc1.weight.data[:,0:7]=network.fc1.weight.data
     network2.fc2.weight.data=network.fc2.weight.data
     network2.fc3.weight.data=network.fc3.weight.data
     network2.fc1.bias.data=network.fc1.bias.data
     network2.fc2.bias.data=network.fc2.bias.data
     network2.fc3.bias.data=network.fc3.bias.data
+    network2.fc1.weight.data[:,7]=torch.zeros(10)
+    network2=network2.float()
+    controller = NN2Control()
+    x_true=Benchmark1[:,0]
+    y_true= Benchmark1[:,1]
+    t= Benchmark1[:,2]
+    vel=Benchmark1[:,3]
+    xp=[]
+    yp=[]
+    x=[]
+    y=[]
+    pid=StanleyPID()
+    for i in  range(2):
+        ego=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+        print('controller: ', i)
+        th1t=0
+        th2t=0
+        th1=[]
+        th2=[]
+        x_truck=[]
+        y_truck=[]
+        
+        for j in range(len(t)):
+            if i == 1:
+                state = ego.convert_world_state_to_front()
+                ctrl_delta, ctrl_vel, err, interr, differr = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
+                xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+                x_truck.append(xt)
+                y_truck.append(yt)
+                th1.append(th1t)
+                th2.append(th2t)
+                xp.append(xt); yp.append(yt)
+            else:
+                state = ego.convert_world_state_to_front()
+                ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t, network2)
+                xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+                x_truck.append(xt)
+                y_truck.append(yt)
+                th1.append(th1t)
+                th2.append(th2t)
+                x.append(xt); y.append(yt);
+            #inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
+            #network_input=torch.tensor(inputs)
+            #out=self.controllers[i](network_input)
+            #x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
+        if i == 1:
+            pid_fitness, CTerr =calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
+        else:
+            controller_fitness, CTerr = calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
+    print('Benchmark 1 PID fitness: ', pid_fitness)
+    print('Benchmark 1 controller fitness: ', controller_fitness)
+    plt.plot(x,y)
+    plt.plot(x_true,y_true,'r--')
+    plt.plot(xp,yp,'g--')
+    plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.show()
     #print(network.fc1.weight.data)
     #print(network.fc3.weight.data)
     #print(network2.fc1.weight.data)
     #print(network2.fc3.weight.data)
-    
+    network2=network2.double()
     evolution=EvolutionaryAlgorithm(network2)
-    for i in range(100):
+    for i in range(1000):
+        print(i)
         evolution.iterate()
+        if i%20==0:
+            controller = NN2Control()
+            x_true=Benchmark1[:,0]
+            y_true= Benchmark1[:,1]
+            t= Benchmark1[:,2]
+            vel=Benchmark1[:,3]
+            x=[]
+            y=[]
+            xp=[]
+            yp=[]
+        
+            x_truck=[]
+            y_truck=[]
+            th1t=0
+            th2t=0
+            th1=[]
+            th2=[]
+            pid=StanleyPID()
+            for i in  range(2):
+                ego=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+                print('controller: ', i)
+                th1t=0
+                th2t=0
+                th1=[]
+                th2=[]
+                x_truck=[]
+                y_truck=[]
+                for j in range(len(t)):
+                    if i == 1:
+                        state = ego.convert_world_state_to_front()
+                        ctrl_delta, ctrl_vel, err, interr, differr = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
+                        xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+                        x_truck.append(xt)
+                        y_truck.append(yt)
+                        th1.append(th1t)
+                        th2.append(th2t)
+                        xp.append(xt); yp.append(yt)
+                    else:
+                        state = ego.convert_world_state_to_front()
+                        ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t, evolution.controllers[evolution.best_controller_idx])
+                        xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+                        x_truck.append(xt)
+                        y_truck.append(yt)
+                        th1.append(th1t)
+                        th2.append(th2t)
+                        x.append(xt); y.append(yt);
+                    #inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
+                    #network_input=torch.tensor(inputs)
+                    #out=self.controllers[i](network_input)
+                    #x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
+                if i == 1:
+                    pid_fitness, CTerr =calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
+                else:
+                    controller_fitness, CTerr = calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
+            
+            print('Benchmark 1 PID fitness: ', pid_fitness)
+            print('Benchmark 1 controller fitness: ', controller_fitness)
+            plt.plot(x,y)
+            plt.plot(x_true,y_true,'r--')
+            plt.plot(xp,yp,'g--')
+            plt.legend(['Network Performance','True Path', 'PID Performance'])
+            plt.show()
+    
+    controller = NN2Control()
+    x_true=Benchmark1[:,0]
+    y_true= Benchmark1[:,1]
+    t= Benchmark1[:,2]
+    vel=Benchmark1[:,3]
+    x=[]
+    y=[]
+    xp=[]
+    yp=[]
+
+    x_truck=[]
+    y_truck=[]
+    th1t=0
+    th2t=0
+    th1=[]
+    th2=[]
+    pid=StanleyPID()
+    for i in  range(2):
+        ego=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+        print('controller: ', i)
+        th1t=0
+        th2t=0
+        th1=[]
+        th2=[]
+        x_truck=[]
+        y_truck=[]
+        for j in range(len(t)):
+            if i == 1:
+                state = ego.convert_world_state_to_front()
+                ctrl_delta, ctrl_vel, err, interr, differr = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
+                xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+                x_truck.append(xt)
+                y_truck.append(yt)
+                th1.append(th1t)
+                th2.append(th2t)
+                xp.append(xt); yp.append(yt)
+            else:
+                state = ego.convert_world_state_to_front()
+                ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t, evolution.controllers[evolution.best_controller_idx])
+                xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+                x_truck.append(xt)
+                y_truck.append(yt)
+                th1.append(th1t)
+                th2.append(th2t)
+                x.append(xt); y.append(yt);
+            #inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
+            #network_input=torch.tensor(inputs)
+            #out=self.controllers[i](network_input)
+            #x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
+        if i == 1:
+            pid_fitness, CTerr =calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
+        else:
+            controller_fitness, CTerr = calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
+    
+    print('Benchmark 1 PID fitness: ', pid_fitness)
+    print('Benchmark 1 controller fitness: ', controller_fitness)
+    plt.plot(x,y)
+    plt.plot(x_true,y_true,'r--')
+    plt.plot(xp,yp,'g--')
+    plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.show()
+    x_true=Benchmark2[:,0]
+    y_true= Benchmark2[:,1]
+    t= Benchmark2[:,2]
+    vel=Benchmark2[:,3]
+    
+    x_truck=[]
+    y_truck=[]
+    th1t=0
+    th2t=0
+    th1=[]
+    th2=[]
+    pid=StanleyPID()
+    x=[]
+    y=[]
+    xp=[]
+    yp=[]
+    for i in  range(2):
+        ego=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+        print('controller: ', i)
+        th1t=0
+        th2t=0
+        th1=[]
+        th2=[]
+        x_truck=[]
+        y_truck=[]
+        for j in range(len(t)):
+            if i == 1:
+                state = ego.convert_world_state_to_front()
+                ctrl_delta, ctrl_vel, err, interr, differr = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
+                xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+                x_truck.append(xt)
+                y_truck.append(yt)
+                th1.append(th1t)
+                th2.append(th2t)
+                xp.append(xt); yp.append(yt)
+            else:
+                state = ego.convert_world_state_to_front()
+                ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t, evolution.controllers[evolution.best_controller_idx])
+                xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+                x_truck.append(xt)
+                y_truck.append(yt)
+                th1.append(th1t)
+                th2.append(th2t)
+                x.append(xt); y.append(yt);
+            #inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
+            #network_input=torch.tensor(inputs)
+            #out=self.controllers[i](network_input)
+            #x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
+        if i == 1:
+            pid_fitness, CTerr =calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
+        else:
+            controller_fitness, CTerr = calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
+    print('Benchmark 2 PID fitness: ', pid_fitness)
+    print('Benchmark 2 controller fitness: ', controller_fitness)
+    plt.plot(x,y)
+    plt.plot(x_true,y_true,'r--')
+    plt.plot(xp,yp,'g--')
+    plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.show()
+    x_true=Benchmark3[:,0]
+    y_true= Benchmark3[:,1]
+    t= Benchmark3[:,2]
+    vel=Benchmark3[:,3]
+    x=[]
+    y=[]
+    xp=[]
+    yp=[]
+    x_truck=[]
+    y_truck=[]
+    th1t=0
+    th2t=0
+    th1=[]
+    th2=[]
+    pid=StanleyPID()
+    for i in  range(2):
+        ego=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+        print('controller: ', i)
+        th1t=0
+        th2t=0
+        th1=[]
+        th2=[]
+        x_truck=[]
+        y_truck=[]
+        for j in range(len(t)):
+            if i == 1:
+                state = ego.convert_world_state_to_front()
+                ctrl_delta, ctrl_vel, err, interr, differr = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
+                xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+                x_truck.append(xt)
+                y_truck.append(yt)
+                th1.append(th1t)
+                th2.append(th2t)
+                xp.append(xt); yp.append(yt)
+                
+            else:
+                state = ego.convert_world_state_to_front()
+                ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t, evolution.controllers[evolution.best_controller_idx])
+                xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+                x_truck.append(xt)
+                y_truck.append(yt)
+                th1.append(th1t)
+                th2.append(th2t)
+                x.append(xt); y.append(yt);
+               
+            #inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
+            #network_input=torch.tensor(inputs)
+            #out=self.controllers[i](network_input)
+            #x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
+        if i == 1:
+            pid_fitness, CTerr =calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
+        else:
+            controller_fitness, CTerr = calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
+    print('Benchmark 3 PID fitness: ', pid_fitness)
+    print('Benchmark 3 controller fitness: ', controller_fitness)
+    plt.plot(x,y)
+    plt.plot(x_true,y_true,'r--')
+    plt.plot(xp,yp,'g--')
+    plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.show()
+    # 
     #controller=NNControl()
    
     #controller.calc_steer_control(t,state,path_x,path_y,path_vel,network)

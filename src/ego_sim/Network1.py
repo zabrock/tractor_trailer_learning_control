@@ -487,17 +487,10 @@ def main():
     y_true= Benchmark1[:,1]
     t= Benchmark1[:,2]
     vel=Benchmark1[:,3]
-    x=[]
-    y=[]
     xp=[]
     yp=[]
-
-    x_truck=[]
-    y_truck=[]
-    th1t=0
-    th2t=0
-    th1=[]
-    th2=[]
+    x=[]
+    y=[]
     pid=StanleyPID()
     for i in  range(2):
         ego=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
@@ -508,6 +501,7 @@ def main():
         th2=[]
         x_truck=[]
         y_truck=[]
+        
         for j in range(len(t)):
             if i == 1:
                 state = ego.convert_world_state_to_front()

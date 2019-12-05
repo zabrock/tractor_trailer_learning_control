@@ -47,7 +47,7 @@ class EvolutionaryAlgorithm(object):
         temp=list(nn_controller.fc1.weight.data.shape)
         weight_add=torch.rand(temp)
         weight_add=(-0.5+weight_add)/sum(weight_add)
-        weight_add[:,7]=weight_add[:,7]*10
+#        weight_add[:,7]=weight_add[:,7]*10
         nn_controller.fc1.weight.data=nn_controller.fc1.weight.data+weight_add*self.pct_weight_var
         #modify the weights of the 2nd layer
         temp=list(nn_controller.fc2.weight.data.shape)

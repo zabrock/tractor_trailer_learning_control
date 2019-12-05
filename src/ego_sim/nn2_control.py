@@ -90,7 +90,7 @@ class NN2Control(object):
         stuff=list(err)
         stuff2=list(err_diff)
         stuff3=list(self.err_int)
-        ctrl_delta=network(torch.tensor([float(stuff[0]),float(stuff[1]),float(ctrl_vel),float(stuff2[0]),float(stuff2[1]),float(stuff3[0]),float(stuff3[1]),float(HD2)]))
+        ctrl_delta=network(torch.tensor([float(stuff[0]),float(stuff[1]),float(ctrl_vel),float(stuff2[0]),float(stuff3[0]),float(HD2)]))
         #print(ctrl_vel, path_vel)
         ctrl_delta=ctrl_delta.data.numpy()
         ctrl_delta=np.asscalar(ctrl_delta)

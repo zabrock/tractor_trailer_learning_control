@@ -17,7 +17,7 @@ import random
 import copy
 
 class EvolutionaryAlgorithm(object):
-    def __init__(self,nn_controller,pop_size=10,pct_weight_variation=0.000002):
+    def __init__(self,nn_controller,pop_size=10,pct_weight_variation=0.00000000002):
         # Save number of controllers to keep through each iteration
         self.pop_size = pop_size
         # Save the percent weight variation to use when permutating controllers

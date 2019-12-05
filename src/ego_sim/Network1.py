@@ -86,7 +86,7 @@ def test_network(network,x_true,y_true,vel,t):
     rpg = RandomPathGenerator()
     #x_true, y_true, t, vel = rpg.get_random_path()
     ego = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
-    controller = NNControl()
+    controller = NN2Control()
     pid=StanleyPID()
     pid2=StanleyPID()
     learning_rate=0.01
@@ -98,6 +98,8 @@ def test_network(network,x_true,y_true,vel,t):
     th1 = []
     th2 = []
     running_loss=0
+    th1t=0
+    th2t=0
     #do some  random stuff
     ego2=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
     
@@ -106,7 +108,7 @@ def test_network(network,x_true,y_true,vel,t):
         network=network.float()
         state = ego.convert_world_state_to_front()
         state1 = ego2.convert_world_state_to_front()
-        ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, network)
+        ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t,network)
         ctrl_delta_pid, ctrl_vel_pid, err_pid, interr_pid, differr_pid = pid.calc_steer_control(t[i],state1,x_true,y_true, vel)
         #print(err, interr, differr)
         #print('network', ctrl_delta, ctrl_vel, 'pid', ctrl_delta_pid, ctrl_vel_pid)
@@ -162,7 +164,7 @@ def train_network(network):
     t12=t
     vel1=vel
     ego = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
-    controller = NNControl()
+    controller = NN2Control()
     pid=StanleyPID()
     pid2=StanleyPID()
     learning_rate=0.01
@@ -173,6 +175,8 @@ def train_network(network):
     delta = []
     th1 = []
     th2 = []
+    th1t=0
+    th2t=0
     running_loss=0
     #do some  random stuff
     ego2=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
@@ -182,7 +186,7 @@ def train_network(network):
         network=network.float()
         state = ego.convert_world_state_to_front()
         state1 = ego2.convert_world_state_to_front()
-        ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, network)
+        ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t,network)
         ctrl_delta_pid, ctrl_vel_pid, err_pid, interr_pid, differr_pid = pid.calc_steer_control(t[i],state1,x_true,y_true, vel)
         #print(err, interr, differr)
         #print('network', ctrl_delta, ctrl_vel, 'pid', ctrl_delta_pid, ctrl_vel_pid)
@@ -209,6 +213,7 @@ def train_network(network):
         #print(interr)
         #print(differr)
         inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
+        inputs=np.append(inputs,th1t-th2t)
         #inputs=[err[],err[],ctrl_vel,interr[],interr[],differr]
         network_input=torch.tensor(inputs)
         #print(network_input)
@@ -246,6 +251,8 @@ def train_network(network):
     loss_time=[]
     MSE=[]
     MSE1=0
+    th1t=0
+    th2t=0
     for i in range(20000):
         #network=network.float()
         #state = ego.convert_world_state_to_front() 
@@ -254,6 +261,7 @@ def train_network(network):
         input1=pid_list[0:3]
         input2=pid_list[4:]
         input1=np.concatenate((input1,input2), axis=0)
+        input1= np.append(input1,0)
         #print(input1)
         target1=pid_list[3]
         network_input=torch.tensor(input1)
@@ -291,7 +299,7 @@ def train_network(network):
     #x_true, y_true, t, vel = rpg.get_random_path()
     ego = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
     ego2=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
-    controller = NNControl()
+    controller = NN2Control()
     pid=StanleyPID()
     pid2=StanleyPID()
     pl=0
@@ -301,7 +309,7 @@ def train_network(network):
         network=network.float()
         state = ego.convert_world_state_to_front()
         state1 = ego2.convert_world_state_to_front()
-        ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, network)
+        ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t, network)
         ctrl_delta_pid, ctrl_vel_pid, err_pid, interr_pid, differr_pid = pid2.calc_steer_control(t[i],state,x_true,y_true, vel)
         ctrl_delta_pid1, ctrl_vel_pid1, err_pid1, interr_pid1, differr_pid1 = pid.calc_steer_control(t[i],state1,x_true,y_true, vel)
         #print(err, interr, differr)
@@ -329,6 +337,7 @@ def train_network(network):
         #print(interr)
         #print(differr)
         inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
+        inputs=np.append(inputs, th1t-th2t)
         #inputs=[err[],err[],ctrl_vel,interr[],interr[],differr]
         network_input=torch.tensor(inputs)
         #print(network_input)
@@ -368,10 +377,9 @@ def train_network(network):
     
 
 def main():
-    network=Net1()
+    network=Net2()
     #print(network.fc1.weight.detach().numpy())
     network.zero_grad()
-    network2=Net2()
     Benchmark1=pd.read_csv('Benchmark_DLC_31ms_reduced.csv',sep=',',header=0)
     Benchmark1=Benchmark1.values
     Benchmark2=pd.read_csv('Benchmark_SScorner_80m_left_reduced.csv',sep=',',header=0)
@@ -539,7 +547,7 @@ def main():
     #print(network.fc1.weight.data)
     #print(network.fc3.weight.data)
     #print(network2.fc1.weight.data)
-    #print(network2.fc3.weight.data)
+    #print(network2.fc3.weight.data) 
     network2=network2.double()
     evolution=EvolutionaryAlgorithm(network2)
     for i in range(1000):

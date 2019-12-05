@@ -75,7 +75,11 @@ class EgoSim(object):
 		self.P['I1'] = m1_alpha*55660.3
 		self.P['m2'] = m2_alpha*27091.8
 		self.P['I2'] = m2_alpha*386841
-		
+		self.P['C1'] = Csteer_alpha*187020.2*2
+		self.P['C2'] = Cdrive_alpha*130274.0*4
+		self.P['C3'] = Cdrive_alpha*130274.0*4
+		self.P['C4'] = Ctrailer_alpha*115000.0*4
+		self.P['C5'] = Ctrailer_alpha*115000.0*4
 		
 		
 	def calculate_mass_matrix(self):

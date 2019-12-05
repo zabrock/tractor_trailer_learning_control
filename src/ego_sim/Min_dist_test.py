@@ -9,6 +9,7 @@ import numpy as np
 from numpy import cos, sin
 from stanley_pid import calc_path_error
 #import time
+import matplotlib.pyplot as plt
 
 def calc_off_tracking(x_front, y_front, th1, th2, P, path_x, path_y):
     # Preallocate
@@ -18,17 +19,17 @@ def calc_off_tracking(x_front, y_front, th1, th2, P, path_x, path_y):
     y_c_mat = []
     x_trail_mat = []
     y_trail_mat = []
-
+#
     # Calculate the rear and trailer axle positions:
-    for i in range(len(x_front)):
-        x_c = x_front[i] - (P['l1'] - P['c']) * cos(th1[i])
-        x_c_mat.append(x_c)
-        y_c = y_front[i] - (P['l1'] - P['c']) * sin(th1[i])
-        y_c_mat.append(y_c)
-        x_trail = x_c - (P['l2']) * cos(th2[i])
-        x_trail_mat.append(x_trail)
-        y_trail = y_c - (P['l2']) * sin(th2[i])
-        y_trail_mat.append(y_trail)
+#    for i in range(len(x_front)):
+#        x_c = x_front[i] - (P['l1'] - P['c']) * cos(th1[i])
+#        x_c_mat.append(x_c)
+#        y_c = y_front[i] - (P['l1'] - P['c']) * sin(th1[i])
+#        y_c_mat.append(y_c)
+#        x_trail = x_c - (P['l2']) * cos(th2[i])
+#        x_trail_mat.append(x_trail)
+#        y_trail = y_c - (P['l2']) * sin(th2[i])
+#        y_trail_mat.append(y_trail)
 
     truck_mindist_mat = []
     trail_mindist_mat = []
@@ -40,8 +41,10 @@ def calc_off_tracking(x_front, y_front, th1, th2, P, path_x, path_y):
         I_min_truck = np.argmin(dist_squared_truck)
         truck_mindist, _ = calc_path_error(state_1, path_x, path_y, I_min_truck)
 
-        state_2 = [x_trail_mat[j], y_trail_mat[j], 0, th1[j], th2[j]]
-        dist_squared_trail = [(x_trail_mat[j] - x) ** 2 + (y_trail_mat[j] - y) ** 2
+        x_trail = x_front[j] - (P['l1'] - P['c']) * cos(th1[j]) - (P['l2']) * cos(th2[j])
+        y_trail = y_front[j] - (P['l1'] - P['c']) * sin(th1[j]) - (P['l2']) * sin(th2[j])
+        state_2 = [x_trail, y_trail, 0, th1[j], th2[j]]
+        dist_squared_trail = [(x_trail - x) ** 2 + (y_trail - y) ** 2
                               for x, y in zip(path_x, path_y)]
         I_min_trail = np.argmin(dist_squared_trail)
         trail_mindist, _ = calc_path_error(state_2, path_x, path_y, I_min_trail)
@@ -54,9 +57,12 @@ def calc_off_tracking(x_front, y_front, th1, th2, P, path_x, path_y):
 
     err_trail = np.square(trail_mindist_mat)
     sqrd_err_trail = np.sum(err_trail)
-
+    
+#    plt.plot(x_front,y_front)
+#    plt.plot(x_trail_mat,y_trail_mat)
+#    plt.show()
+#    plt.plot(np.arange(0,len(x_front)),truck_mindist_mat)
+#    plt.plot(np.arange(0,len(x_front)),trail_mindist_mat)
+#    plt.show()
+    
     return sqrd_err_truck + sqrd_err_trail, err_trail
-#    print("Mean square error is  " + str(mean_sqrd_error))
-
-#    print("Off track function time is " + str(time.time()-start_time))
-#    return truck_mindist_mat, trail_mindist_mat

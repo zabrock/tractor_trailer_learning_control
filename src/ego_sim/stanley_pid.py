@@ -60,9 +60,10 @@ class StanleyPID(object):
 		# Note that this method assumes positive progress along the path at every time step
 		# since it only checks points ahead of the last closest index
 		dist_squared = [(state[0]-x)**2 + (state[1]-y)**2 
-				  for x,y in zip(path_x,path_y)]
+				  for x,y in zip(path_x[self.last_closest_idx:self.last_closest_idx+self.ctrl_look],
+                     path_y[self.last_closest_idx:self.last_closest_idx+self.ctrl_look])]
 		
-		I_min = np.argmin(dist_squared)
+		I_min = self.last_closest_idx + np.argmin(dist_squared)
 		# Get the desired velocity at the closest point
 		ctrl_vel = path_vel[I_min]
 		# Find cross-track and heading error between the current ppsition and desired path
@@ -118,7 +119,7 @@ class StanleyPID(object):
 		elif ctrl_delta < -2*np.pi/5:
 			ctrl_delta = -2*np.pi/5
 				
-		output = [ct_err, hd_err, ctrl_vel, ctrl_delta, ct_int, hd_int, ct_diff, hd_diff]
+		output = [ct_err, hd_err, ctrl_vel, ctrl_delta, ct_int, ct_diff]
 		return output
 		
 def calc_path_error(state,path_x,path_y,I_min):

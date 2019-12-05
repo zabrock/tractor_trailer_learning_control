@@ -15,12 +15,8 @@ import numpy as np
 from random_path_generator import RandomPathGenerator
 from ego_sim import EgoSim
 from stanley_pid import StanleyPID
-from nn_control import NNControl
 from nn2_control import NN2Control
 import matplotlib.pyplot as plt
-import csv
-import time
-import math
 from evolutionary_algorithm import EvolutionaryAlgorithm
 from Min_dist_test import calc_off_tracking
 
@@ -32,72 +28,33 @@ class Net1(nn.Module):
         self.fc3 = nn.Linear(5, 1)
 
     def forward(self, x):
-        # Max pooling over a (2, 2) window
-        #x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
-        #print(np.shape(x))
-        # If the size is a square you can only specify a single number
-        #a=F.relu(self.conv2(x))
-        #x = F.max_pool2d(F.relu(self.conv2(x)), 2)
-        #print('a: ', a)
-        #print('x: ',x)
-       # x = x.view(-1, self.num_flat_features(x))
-        #print(np.shape(x))
         x = torch.sigmoid(self.fc1(x))
-        #print(np.shape(x))
         x = torch.sigmoid(self.fc2(x))
-        #print(np.shape(x))
-        x = torch.sigmoid(self.fc3(x))*4/5*np.pi-2*np.pi/5
-        #print(np.shape(x))
+        x = torch.sigmoid(self.fc3(x))*4/5*np.pi-2*np.pi/5 # restrict output to range [-2*pi/5, 2*pi/5]
+		
         return x
   
 class Net2(nn.Module):
 
     def __init__(self):
         super(Net2, self).__init__()
-        # 1 input image channel, 6 output channels, 3x3 square convolution
-        # kernel
-        #self.conv1 = nn.Conv2d(1, 6, 3)
-        #self.conv2 = nn.Conv2d(6, 16, 3)
-        # an affine operation: y = Wx + b
-        self.fc1 = nn.Linear(8, 10)  # 6*6 from image dimension
+        self.fc1 = nn.Linear(6, 10)  # 6*6 from image dimension
         self.fc2 = nn.Linear(10, 5)
         self.fc3 = nn.Linear(5, 1)
 
     def forward(self, x):
-        # Max pooling over a (2, 2) window
-        #x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
-        #print(np.shape(x))
-        # If the size is a square you can only specify a single number
-        #a=F.relu(self.conv2(x))
-        #x = F.max_pool2d(F.relu(self.conv2(x)), 2)
-        #print('a: ', a)
-        #print('x: ',x)
-       # x = x.view(-1, self.num_flat_features(x))
-        #print(np.shape(x))
         x = torch.sigmoid(self.fc1(x))
-        #print(np.shape(x))
         x = torch.sigmoid(self.fc2(x))
-        #print(np.shape(x))
         x = torch.sigmoid(self.fc3(x))*4/5*np.pi-2*np.pi/5
-        #print(np.shape(x))
         return x
 
 def test_network(network,x_true,y_true,vel,t):
-    rpg = RandomPathGenerator()
-    #x_true, y_true, t, vel = rpg.get_random_path()
+	# Initialize truck simulator and control objects
     ego = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
     controller = NN2Control()
     pid=StanleyPID()
-    pid2=StanleyPID()
-    learning_rate=0.01
+	
     x = []
-    y = []
-    xp=[]
-    yp=[]
-    delta = []
-    th1 = []
-    th2 = []
-    running_loss=0
     th1t=0
     th2t=0
     #do some  random stuff
@@ -110,39 +67,10 @@ def test_network(network,x_true,y_true,vel,t):
         state1 = ego2.convert_world_state_to_front()
         ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t,network)
         ctrl_delta_pid, ctrl_vel_pid, err_pid, interr_pid, differr_pid = pid.calc_steer_control(t[i],state1,x_true,y_true, vel)
-        #print(err, interr, differr)
-        #print('network', ctrl_delta, ctrl_vel, 'pid', ctrl_delta_pid, ctrl_vel_pid)
-        #print([ct,hd,vel])
-        #network_inputs=ct
-        #np.append(network_inputs,hd,vel)
-        #np.append(network_inputs,vel)
-        #network_inputs.append(hd)
-        #network_inputs.append(vel)
-        #ctrl_delta = network(torch.tensor(network_inputs))
-        #print([ctrl_delta,ctrl_vel])
         xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
         x1,y1,delt,tha,thb=ego2.simulate_timestep([ctrl_vel_pid,ctrl_delta_pid])
-        #xp.append(x1); yp.append(y1)
-        #x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
         x.append(err[0]*err[0])
-                #print(np.shape(input1))
-        #print(network.parameters())
-        #print(network.fc1.weight.data)
-        #print(network.fc3.weight.data)
-        #print(j)
-        #print(err)
-        #print(ctrl_vel)
-        #print(interr)
-        #print(differr)
-        #inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
-        #inputs=[err[],err[],ctrl_vel,interr[],interr[],differr]
-        #network_input=torch.tensor(inputs)
-        #print(network_input)
-        #network_target=torch.tensor(ctrl_delta_pid)
-        #network_target=network_target.double()
-        #network= network.double()
-        #print(network_input,network_target)
-        #out=network(network_input)
+		
     x=sum(x)/len(t)
     return  x
  
@@ -150,15 +78,6 @@ def test_network(network,x_true,y_true,vel,t):
 def train_network(network): 
     rpg = RandomPathGenerator()
     x_true, y_true, t, vel = rpg.get_random_path()
-    '''while True:
-        plt.plot(x_true,y_true)
-        plt.show()
-        a=input('good?')
-        if a=='1':
-            break
-        else:
-            x_true, y_true, t, vel = rpg.get_random_path()
-    '''
     xt1=x_true
     yt1=y_true
     t12=t
@@ -188,56 +107,23 @@ def train_network(network):
         state1 = ego2.convert_world_state_to_front()
         ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t,network)
         ctrl_delta_pid, ctrl_vel_pid, err_pid, interr_pid, differr_pid = pid.calc_steer_control(t[i],state1,x_true,y_true, vel)
-        #print(err, interr, differr)
-        #print('network', ctrl_delta, ctrl_vel, 'pid', ctrl_delta_pid, ctrl_vel_pid)
-        #print([ct,hd,vel])
-        #network_inputs=ct
-        #np.append(network_inputs,hd,vel)
-        #np.append(network_inputs,vel)
-        #network_inputs.append(hd)
-        #network_inputs.append(vel)
-        #ctrl_delta = network(torch.tensor(network_inputs))
-        #print([ctrl_delta,ctrl_vel])
+
         xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
         x1,y1,delt,tha,thb=ego2.simulate_timestep([ctrl_vel_pid,ctrl_delta_pid])
         xp.append(x1); yp.append(y1)
         x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
 
-                #print(np.shape(input1))
-        #print(network.parameters())
-        #print(network.fc1.weight.data)
-        #print(network.fc3.weight.data)
-        #print(j)
-        #print(err)
-        #print(ctrl_vel)
-        #print(interr)
-        #print(differr)
-        inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
+        inputs=np.concatenate((err,ctrl_vel,interr[0],differr[0]),axis=None)
         inputs=np.append(inputs,th1t-th2t)
-        #inputs=[err[],err[],ctrl_vel,interr[],interr[],differr]
+
         network_input=torch.tensor(inputs)
-        #print(network_input)
-        #network_target=torch.tensor(ctrl_delta_pid)
-        #network_target=network_target.double()
+
         network= network.double()
-        #print(network_input,network_target)
+
         out=network(network_input)
-        #if (i >50) &  (i < 100):
-        #print(out)
-        #network.zero_grad()
-        #criterion = nn.MSELoss()
-        #loss = criterion(out, network_target)
-        #loss.backward()
-        #running_loss += loss.item()
-        #print(loss.item())
-        #for f in network.parameters():
-        #    f.data.sub_(f.grad.data * learning_rate)
+
     print(running_loss)
-    #plt.plot(x,y)
-    #plt.plot(x_true,y_true,'r--')
-    #plt.plot(xp,yp,'g--')
-    #plt.legend(['Network Performance','True Path', 'PID Performance'])
-    #plt.show()
+
     running_loss=0
     x = []
     y = []
@@ -258,7 +144,7 @@ def train_network(network):
         input1=pid_list[0:3]
         input2=pid_list[4:]
         input1=np.concatenate((input1,input2), axis=0)
-        input1= np.append(input1,0)
+        input1= np.append(input1,np.pi*np.random.random()-np.pi/2)
         #print(input1)
         target1=pid_list[3]
         network_input=torch.tensor(input1)
@@ -306,18 +192,16 @@ def train_network(network):
         xp.append(x1); yp.append(y1)
         x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
 
-        inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
+
+
+        inputs=np.concatenate((err,ctrl_vel,interr[0],differr[0]),axis=None)
+
         inputs=np.append(inputs, th1t-th2t)
-        #inputs=[err[],err[],ctrl_vel,interr[],interr[],differr]
         network_input=torch.tensor(inputs)
-        #print(network_input)
         network_target=torch.tensor(ctrl_delta_pid)
         network_target=network_target.double()
         network= network.double()
-        #print(network_input,network_target)
         out=network(network_input)
-        #if (i >50) &  (i < 100):
-        #print(out)
         network.zero_grad()
         criterion = nn.MSELoss()
         loss = criterion(out, network_target)
@@ -328,7 +212,6 @@ def train_network(network):
             pl=0
             
         running_loss += loss.item()
-        #print(loss.item())
         for f in network.parameters():
             f.data.sub_(f.grad.data * learning_rate)
     plt.plot(x,y)
@@ -349,6 +232,56 @@ def main():
     Benchmark2=Benchmark2.values
     Benchmark3=pd.read_csv('Benchmark_SScorner_500m_left_25ms_reduced.csv',sep=',',header=0)
     Benchmark3=Benchmark3.values
+
+
+    '''$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+    for  k in range(5):
+        thing_range=list(range(50))
+        np.random.shuffle(thing_range)
+        total_loss=0
+        for i in thing_range:
+            running_loss=0
+            for j in range(len(PID_Data)):
+                #print(np.shape(input1))
+                #print(network.parameters())
+                #print(network.fc1.weight.data)
+                #print(network.fc3.weight.data)
+                #print(j)
+                network_input=torch.tensor(input1[j])
+                #print(network_input)
+                network_target=torch.tensor(target1[j])
+                network_target=network_target.double()
+                network= network.double()
+                
+                out=network(network_input)
+                network.zero_grad()
+                criterion = nn.MSELoss()
+                loss = criterion(out, network_target)
+                loss.backward()
+                running_loss += loss.item()
+                #print(out.data,network_target.data, out.data-network_target.data)
+                #print(loss.item())
+                for f in network.parameters():
+                    f.data.sub_(f.grad.data * learning_rate)
+            print('[%5d] loss: %.3f' % (i + 1, running_loss))
+            #if running_loss >= 5:
+                #input('press  enter')
+            total_loss+=running_loss
+            PID_Data=pd.read_csv('random_path_pid_more_output_'+str(i)+'.csv',sep=',',header=0)
+        #print(PID_Data)
+            
+            PID_Data=PID_Data.values
+            np.random.shuffle(PID_Data)
+            input1=PID_Data[:,0:2]
+            input2=PID_Data[:,4:]
+            input1=np.concat enate((input1,input2),axis=1)
+        #print(input1)
+            target1=PID_Data[:,3]
+        print('total loss this set: ', total_loss)
+        #print('[%5d] loss: %.3f' %
+        #(i + 1, running_loss))
+    '''
+
     
     #Train the network until it is sufficient, asking the human operator for input on whether the point it reached  is  good enough
     network=network.float()
@@ -357,10 +290,12 @@ def main():
         a=input('is this good enough?')
         if a=='1':
             break
+
     
     
     #Initialize varriables to run the first benchmark test  on the PID mimicking controller
     network=network.float()
+
     controller = NN2Control()
     x_true=Benchmark1[:,0]
     y_true= Benchmark1[:,1]
@@ -413,7 +348,9 @@ def main():
     plt.legend(['Network Performance','True Path', 'PID Performance'])
     plt.show()
 
+
     #send the pid mimicking controller to the  evolutionary algorithm
+
     evolution=EvolutionaryAlgorithm(network)
     for i in range(1000):
         print(i)

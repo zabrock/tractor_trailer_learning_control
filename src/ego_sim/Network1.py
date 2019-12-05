@@ -254,9 +254,6 @@ def train_network(network):
     th1t=0
     th2t=0
     for i in range(20000):
-        #network=network.float()
-        #state = ego.convert_world_state_to_front() 
-        #ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, network)
         pid_list=pid.control_from_random_error()
         input1=pid_list[0:3]
         input2=pid_list[4:]
@@ -282,21 +279,13 @@ def train_network(network):
             MSE.append(MSE1)
             loss_time.append(i)
         running_loss += loss.item()
-        #if  i % 10000==0:
-        #    print(i)
-        #print(out.data,network_target.data, out.data-network_target.data)
-        #print(loss.item())
+
         for f in network.parameters():
             f.data.sub_(f.grad.data * learning_rate)
     print(running_loss)
     #follow the path
     running_loss=0
-    #plt.plot(loss_time,MSE)
-    #plt.xlabel('Data Number')
-    #plt.ylabel('Average Fitness')
-    #plt.show()
 
-    #x_true, y_true, t, vel = rpg.get_random_path()
     ego = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
     ego2=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
     controller = NN2Control()
@@ -312,30 +301,11 @@ def train_network(network):
         ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t, network)
         ctrl_delta_pid, ctrl_vel_pid, err_pid, interr_pid, differr_pid = pid2.calc_steer_control(t[i],state,x_true,y_true, vel)
         ctrl_delta_pid1, ctrl_vel_pid1, err_pid1, interr_pid1, differr_pid1 = pid.calc_steer_control(t[i],state1,x_true,y_true, vel)
-        #print(err, interr, differr)
-        #print('network', ctrl_delta, ctrl_vel, 'pid', ctrl_delta_pid, ctrl_vel_pid)
-        #print([ct,hd,vel])
-        #network_inputs=ct
-        #np.append(network_inputs,hd,vel)
-        #np.append(network_inputs,vel)
-        #network_inputs.append(hd)
-        #network_inputs.append(vel)
-        #ctrl_delta = network(torch.tensor(network_inputs))
-        #print([ctrl_delta,ctrl_vel])
         xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
         x1,y1,delt,tha,thb=ego2.simulate_timestep([ctrl_vel_pid1,ctrl_delta_pid1])
         xp.append(x1); yp.append(y1)
         x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
 
-                #print(np.shape(input1))
-        #print(network.parameters())
-        #print(network.fc1.weight.data)
-        #print(network.fc3.weight.data)
-        #print(j)
-        #print(err)
-        #print(ctrl_vel)
-        #print(interr)
-        #print(differr)
         inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
         inputs=np.append(inputs, th1t-th2t)
         #inputs=[err[],err[],ctrl_vel,interr[],interr[],differr]
@@ -357,18 +327,10 @@ def train_network(network):
             loss_time.append(i)
             pl=0
             
-            
         running_loss += loss.item()
         #print(loss.item())
         for f in network.parameters():
             f.data.sub_(f.grad.data * learning_rate)
-    '''
-    print(running_loss)
-    plt.plot(loss_time,plot_loss)
-    plt.xlabel('Data Number')
-    plt.ylabel('Average Loss of 500 samples')
-    plt.show()
-    '''
     plt.plot(x,y)
     plt.plot(x_true,y_true,'r--')
     plt.plot(xp,yp,'g--')
@@ -378,118 +340,27 @@ def train_network(network):
 
 def main():
     network=Net2()
-    #print(network.fc1.weight.detach().numpy())
     network.zero_grad()
+    
+    #Read in the benchmark paths that we will use
     Benchmark1=pd.read_csv('Benchmark_DLC_31ms_reduced.csv',sep=',',header=0)
     Benchmark1=Benchmark1.values
     Benchmark2=pd.read_csv('Benchmark_SScorner_80m_left_reduced.csv',sep=',',header=0)
     Benchmark2=Benchmark2.values
     Benchmark3=pd.read_csv('Benchmark_SScorner_500m_left_25ms_reduced.csv',sep=',',header=0)
     Benchmark3=Benchmark3.values
-    #PID_Data=np.random.rand(100,5)
-    #print('PID',PID_Data)
-    #PID_Data=pd.read_csv('random_path_pid_more_output_0.csv',sep=',',header=0)
-    #print(PID_Data)
-    #PID_Data=PID_Data.values
-    #np.random.shuffle(PID_Data)
-    #input1=PID_Data[:,0:3]
-    #input2=PID_Data[:,4:]
-    #input1=np.concatenate((input1,input2), axis=1)
-    #print(input1)
-    #target1=PID_Data[:,3]
-    '''$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-    for  k in range(5):
-        thing_range=list(range(50))
-        np.random.shuffle(thing_range)
-        total_loss=0
-        for i in thing_range:
-            running_loss=0
-            for j in range(len(PID_Data)):
-                #print(np.shape(input1))
-                #print(network.parameters())
-                #print(network.fc1.weight.data)
-                #print(network.fc3.weight.data)
-                #print(j)
-                network_input=torch.tensor(input1[j])
-                #print(network_input)
-                network_target=torch.tensor(target1[j])
-                network_target=network_target.double()
-                network= network.double()
-                
-                out=network(network_input)
-                network.zero_grad()
-                criterion = nn.MSELoss()
-                loss = criterion(out, network_target)
-                loss.backward()
-                running_loss += loss.item()
-                #print(out.data,network_target.data, out.data-network_target.data)
-                #print(loss.item())
-                for f in network.parameters():
-                    f.data.sub_(f.grad.data * learning_rate)
-            print('[%5d] loss: %.3f' % (i + 1, running_loss))
-            #if running_loss >= 5:
-                #input('press  enter')
-            total_loss+=running_loss
-            PID_Data=pd.read_csv('random_path_pid_more_output_'+str(i)+'.csv',sep=',',header=0)
-        #print(PID_Data)
-            
-            PID_Data=PID_Data.values
-            np.random.shuffle(PID_Data)
-            input1=PID_Data[:,0:2]
-            input2=PID_Data[:,4:]
-            input1=np.concat enate((input1,input2),axis=1)
-        #print(input1)
-            target1=PID_Data[:,3]
-        print('total loss this set: ', total_loss)
-        #print('[%5d] loss: %.3f' %
-        #(i + 1, running_loss))
-    '''   
-
-    #running_loss = 0.0
     
-    
-    
+    #Train the network until it is sufficient, asking the human operator for input on whether the point it reached  is  good enough
     network=network.float()
     for i in range(10):
         train_network(network)
         a=input('is this good enough?')
         if a=='1':
             break
-        
-    '''
-    for i  in range(10):
-        train_network(network)
-        j=input('is this good enough? 1 for yes  0 for no')
-        #print(j)
-        if j =='1':
-            break
-    b=time.process_time()
-    '''
-    #print(a-b)
     
     
-    
-    '''
-    with open('weights.csv', mode='w') as weights:
-        weight_writer = csv.writer(weights, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-
-        weight_writer.writerow(network.fc1.weight.detach().numpy())
-        weight_writer.writerow(network.fc1.bias.detach().numpy())
-        weight_writer.writerow(network.fc2.weight.detach().numpy())
-        weight_writer.writerow(network.fc2.bias.detach().numpy())
-        weight_writer.writerow(network.fc3.weight.detach().numpy())
-        weight_writer.writerow(network.fc3.bias.detach().numpy())
-    '''
-    #test_network(network)
-    network=network.double()
-    network2.fc1.weight.data[:,0:7]=network.fc1.weight.data
-    network2.fc2.weight.data=network.fc2.weight.data
-    network2.fc3.weight.data=network.fc3.weight.data
-    network2.fc1.bias.data=network.fc1.bias.data
-    network2.fc2.bias.data=network.fc2.bias.data
-    network2.fc3.bias.data=network.fc3.bias.data
-    network2.fc1.weight.data[:,7]=torch.zeros(10)
-    network2=network2.float()
+    #Initialize varriables to run the first benchmark test  on the PID mimicking controller
+    network=network.float()
     controller = NN2Control()
     x_true=Benchmark1[:,0]
     y_true= Benchmark1[:,1]
@@ -500,6 +371,8 @@ def main():
     x=[]
     y=[]
     pid=StanleyPID()
+    
+    #Run the same benchmark on both the PID controller and the PID mimicking network and compare  the two
     for i in  range(2):
         ego=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
         print('controller: ', i)
@@ -509,7 +382,6 @@ def main():
         th2=[]
         x_truck=[]
         y_truck=[]
-        
         for j in range(len(t)):
             if i == 1:
                 state = ego.convert_world_state_to_front()
@@ -522,17 +394,13 @@ def main():
                 xp.append(xt); yp.append(yt)
             else:
                 state = ego.convert_world_state_to_front()
-                ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t, network2)
+                ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t, network)
                 xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
                 x_truck.append(xt)
                 y_truck.append(yt)
                 th1.append(th1t)
                 th2.append(th2t)
                 x.append(xt); y.append(yt);
-            #inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
-            #network_input=torch.tensor(inputs)
-            #out=self.controllers[i](network_input)
-            #x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
         if i == 1:
             pid_fitness, CTerr =calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
         else:
@@ -544,16 +412,23 @@ def main():
     plt.plot(xp,yp,'g--')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
     plt.show()
-    #print(network.fc1.weight.data)
-    #print(network.fc3.weight.data)
-    #print(network2.fc1.weight.data)
-    #print(network2.fc3.weight.data) 
-    network2=network2.double()
-    evolution=EvolutionaryAlgorithm(network2)
+
+    #send the pid mimicking controller to the  evolutionary algorithm
+    evolution=EvolutionaryAlgorithm(network)
     for i in range(1000):
         print(i)
         evolution.iterate()
+        #every 20 steps, run a benchmark on the best controller in the system to see how it is progressing
         if i%20==0:
+            Fc1=network.fc1.weight.data.numpy()
+            Fc2=network.fc2.weight.data.numpy()
+            Fc3=network.fc3.weight.data.numpy()
+            Evo1=evolution.controllers[evolution.best_controller_idx].fc1.weight.data.numpy()
+            Evo2=evolution.controllers[evolution.best_controller_idx].fc2.weight.data.numpy()
+            Evo3=evolution.controllers[evolution.best_controller_idx].fc3.weight.data.numpy()
+            print(np.linalg.norm(Fc1-Evo1))
+            print(np.linalg.norm(Fc2-Evo2))
+            print(np.linalg.norm(Fc3-Evo3))
             controller = NN2Control()
             x_true=Benchmark1[:,0]
             y_true= Benchmark1[:,1]
@@ -599,10 +474,6 @@ def main():
                         th1.append(th1t)
                         th2.append(th2t)
                         x.append(xt); y.append(yt);
-                    #inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
-                    #network_input=torch.tensor(inputs)
-                    #out=self.controllers[i](network_input)
-                    #x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
                 if i == 1:
                     pid_fitness, CTerr =calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
                 else:
@@ -616,6 +487,7 @@ def main():
             plt.legend(['Network Performance','True Path', 'PID Performance'])
             plt.show()
     
+    #Initialize varriables to run the first benchmark test
     controller = NN2Control()
     x_true=Benchmark1[:,0]
     y_true= Benchmark1[:,1]
@@ -625,7 +497,6 @@ def main():
     y=[]
     xp=[]
     yp=[]
-
     x_truck=[]
     y_truck=[]
     th1t=0
@@ -633,6 +504,7 @@ def main():
     th1=[]
     th2=[]
     pid=StanleyPID()
+    #after the network has finished its evolutionary training, check it  the first benchmark
     for i in  range(2):
         ego=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
         print('controller: ', i)
@@ -661,10 +533,7 @@ def main():
                 th1.append(th1t)
                 th2.append(th2t)
                 x.append(xt); y.append(yt);
-            #inputs=np.concatenate((err,ctrl_vel,interr,differr),axis=None)
-            #network_input=torch.tensor(inputs)
-            #out=self.controllers[i](network_input)
-            #x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
+
         if i == 1:
             pid_fitness, CTerr =calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
         else:
@@ -677,11 +546,12 @@ def main():
     plt.plot(xp,yp,'g--')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
     plt.show()
+    
+    #Initialize varriables to run the second benchmark test on the controller trained on the
     x_true=Benchmark2[:,0]
     y_true= Benchmark2[:,1]
     t= Benchmark2[:,2]
     vel=Benchmark2[:,3]
-    
     x_truck=[]
     y_truck=[]
     th1t=0
@@ -693,6 +563,7 @@ def main():
     y=[]
     xp=[]
     yp=[]
+    #check it  the second benchmark
     for i in  range(2):
         ego=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
         print('controller: ', i)

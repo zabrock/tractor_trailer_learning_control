@@ -17,7 +17,7 @@ import random
 import copy
 
 class EvolutionaryAlgorithm(object):
-    def __init__(self,nn_controller,pop_size=10,pct_weight_variation=0.00000000002):
+    def __init__(self,nn_controller,pop_size=10,pct_weight_variation=0.2):
         # Save number of controllers to keep through each iteration
         self.pop_size = pop_size
         # Save the percent weight variation to use when permutating controllers
@@ -46,33 +46,32 @@ class EvolutionaryAlgorithm(object):
         
         temp=list(nn_controller.fc1.weight.data.shape)
         weight_add=torch.rand(temp)
-        weight_add=(-0.5+weight_add)/sum(weight_add)
-        weight_add[:,7]=weight_add[:,7]*10
+        weight_add=(-0.5+weight_add)*nn_controller.fc1.weight.data
         nn_controller.fc1.weight.data=nn_controller.fc1.weight.data+weight_add*self.pct_weight_var
         #modify the weights of the 2nd layer
         temp=list(nn_controller.fc2.weight.data.shape)
         weight_add=torch.rand(temp)
-        weight_add=(-0.5+weight_add)/sum(weight_add)
+        weight_add=(-0.5+weight_add)*nn_controller.fc2.weight.data
         nn_controller.fc2.weight.data=nn_controller.fc2.weight.data+weight_add*self.pct_weight_var
         #modify the weights of the 3rd layer
         temp=list(nn_controller.fc3.weight.data.shape)
         weight_add=torch.rand(temp)
-        weight_add=(-0.5+weight_add)/sum(weight_add)
+        weight_add=(-0.5+weight_add)*nn_controller.fc3.weight.data
         nn_controller.fc3.weight.data=nn_controller.fc3.weight.data+weight_add*self.pct_weight_var
         #modify the biases of the 1st layer
         temp=list(nn_controller.fc1.bias.data.shape)
         weight_add=torch.rand(temp)
-        weight_add=(-0.5+weight_add)/sum(weight_add)
+        weight_add=(-0.5+weight_add)*nn_controller.fc1.bias.data
         nn_controller.fc1.bias.data=nn_controller.fc1.bias.data+weight_add*self.pct_weight_var
         #modify the biases of the 2nd layer
         temp=list(nn_controller.fc2.bias.data.shape)
         weight_add=torch.rand(temp)
-        weight_add=(-0.5+weight_add)/sum(weight_add)
+        weight_add=(-0.5+weight_add)*nn_controller.fc2.bias.data
         nn_controller.fc2.bias.data=nn_controller.fc2.bias.data+weight_add*self.pct_weight_var
         #modify the biases of the 3rd layer
         temp=list(nn_controller.fc3.bias.data.shape)
         weight_add=torch.rand(temp)
-        weight_add=(-0.5+weight_add)/sum(weight_add)
+        weight_add=(-0.5+weight_add)*nn_controller.fc3.bias.data
         nn_controller.fc3.bias.data=nn_controller.fc3.bias.data+weight_add*self.pct_weight_var
         
         

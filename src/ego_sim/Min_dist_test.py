@@ -21,15 +21,15 @@ def calc_off_tracking(x_front, y_front, th1, th2, P, path_x, path_y):
     y_trail_mat = []
 #
     # Calculate the rear and trailer axle positions:
-    for i in range(len(x_front)):
-        x_c = x_front[i] - (P['l1'] - P['c']) * cos(th1[i])
-        x_c_mat.append(x_c)
-        y_c = y_front[i] - (P['l1'] - P['c']) * sin(th1[i])
-        y_c_mat.append(y_c)
-        x_trail = x_c - (P['l2']) * cos(th2[i])
-        x_trail_mat.append(x_trail)
-        y_trail = y_c - (P['l2']) * sin(th2[i])
-        y_trail_mat.append(y_trail)
+#    for i in range(len(x_front)):
+#        x_c = x_front[i] - (P['l1'] - P['c']) * cos(th1[i])
+#        x_c_mat.append(x_c)
+#        y_c = y_front[i] - (P['l1'] - P['c']) * sin(th1[i])
+#        y_c_mat.append(y_c)
+#        x_trail = x_c - (P['l2']) * cos(th2[i])
+#        x_trail_mat.append(x_trail)
+#        y_trail = y_c - (P['l2']) * sin(th2[i])
+#        y_trail_mat.append(y_trail)
 
     truck_mindist_mat = []
     trail_mindist_mat = []
@@ -58,11 +58,11 @@ def calc_off_tracking(x_front, y_front, th1, th2, P, path_x, path_y):
     err_trail = np.square(trail_mindist_mat)
     sqrd_err_trail = np.sum(err_trail)
     
-    plt.plot(x_front,y_front)
-    plt.plot(x_trail_mat,y_trail_mat)
-    plt.show()
-    plt.plot(np.arange(0,len(x_front)),truck_mindist_mat)
-    plt.plot(np.arange(0,len(x_front)),trail_mindist_mat)
-    plt.show()
+#    plt.plot(x_front,y_front)
+#    plt.plot(x_trail_mat,y_trail_mat)
+#    plt.show()
+#    plt.plot(np.arange(0,len(x_front)),truck_mindist_mat)
+#    plt.plot(np.arange(0,len(x_front)),trail_mindist_mat)
+#    plt.show()
     
     return sqrd_err_truck + sqrd_err_trail, err_trail

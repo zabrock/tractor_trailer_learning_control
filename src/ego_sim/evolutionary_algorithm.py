@@ -14,19 +14,27 @@ from nn2_control import NN2Control
 from random_path_generator import RandomPathGenerator
 from Min_dist_test import calc_off_tracking
 import random
-import copy
 
 class EvolutionaryAlgorithm(object):
-    def __init__(self,nn_controller,pop_size=10,pct_weight_variation=0.2):
+    def __init__(self,nn_controllers,pop_size=10,pct_weight_variation=0.2):
         # Save number of controllers to keep through each iteration
         self.pop_size = pop_size
         # Save the percent weight variation to use when permutating controllers
         self.pct_weight_var = pct_weight_variation
-        nn_controller=nn_controller.float()
-        temp_controllers=copy.deepcopy(nn_controller)
-        # Initialize population of controllers randomly perturbed from the input controller
-        self.controllers = [self.permutate_controller(temp_controllers) for i in range(0,pop_size-1)]
-        self.controllers.append(nn_controller)
+        if not isinstance(nn_controllers,list):
+            nn_controllers=nn_controllers.float()
+            temp_controllers=copy.deepcopy(nn_controllers)
+            # Initialize population of controllers randomly perturbed from the input controller
+            self.controllers = [self.permutate_controller(temp_controllers) for i in range(0,pop_size-1)]
+            self.controllers.append(nn_controllers)
+        else:
+            print('Lots of controllers in')
+            self.controllers = []
+            for controller in nn_controllers:
+                controller = controller.float()
+                temp_controller = copy.deepcopy(controller)
+                self.controllers.append(self.permutate_controller(temp_controller))
+            self.controllers.extend(nn_controllers)
         fitnesses = self.evaluate_fitness()
         self.pid_fitness=0
         # Save the best controller's index

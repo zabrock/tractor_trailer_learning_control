@@ -44,7 +44,7 @@ class NN2Control(object):
         self.last_closest_idx = 0
         self.t_d1 = 0
         
-    def calc_steer_control(self,t,state,path_x,path_y,path_vel,HD2,network):
+    def calc_steer_control(self,t,state,path_x,path_y,path_vel,HD2,network,noise=None):
         '''
         Calculates steering control given a path and current state.
         
@@ -78,22 +78,28 @@ class NN2Control(object):
         ctrl_vel = path_vel[I_min]
         # Find cross-track and heading error between the current ppsition and desired path
         ct_err, hd_err = calc_path_error(state,path_x,path_y,I_min)
+        if noise is not None:
+            added_noise = np.random.normal(0,noise/3)
+            ct_err = (1+added_noise)*ct_err
+            hd_err = (1+added_noise)*hd_err
         err = np.array([ct_err,hd_err])
         # Compute desired steering angle
         Ts = t - self.t_d1
         tau = 0.1 # Time constant for filtering discrete derivatives
         err_diff = ((2*tau-Ts)/(2*tau+Ts))*self.diff_d1 + (2/(2*tau+Ts))*(err-self.err_d1)
         self.err_int += (err+self.err_d1)/2
-        
-        ### FEED THE ERROR, IT'S DERIVATIVE, AND INTEGRAL INTO THE NN HERE ###
-        ### AND HAVE ctrl_delta AS THE NN'S OUTPUT ###
-        stuff=list(err)
+        stuff1=list(err)
         stuff2=list(err_diff)
         stuff3=list(self.err_int)
-        ctrl_delta=network(torch.tensor([float(stuff[0]),float(stuff[1]),float(ctrl_vel),float(stuff2[0]),float(stuff3[0]),float(HD2)]))
-        #print(ctrl_vel, path_vel)
+        ctrl_delta=network(torch.tensor([float(stuff1[0]),float(stuff1[1]),float(ctrl_vel),float(stuff2[0]),float(stuff3[0]),float(HD2)]))
         ctrl_delta=ctrl_delta.data.numpy()
         ctrl_delta=np.asscalar(ctrl_delta)
+        # Limit the steer angle command
+        if ctrl_delta > 2*np.pi/5:
+            ctrl_delta = 2*np.pi/5
+        elif ctrl_delta < -2*np.pi/5:
+            ctrl_delta = -2*np.pi/5
+            
         # Age the data
         self.t_d1 = t
         self.err_d1 = err

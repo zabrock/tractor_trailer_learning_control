@@ -20,20 +20,6 @@ import matplotlib.pyplot as plt
 from evolutionary_algorithm import EvolutionaryAlgorithm
 from Min_dist_test import calc_off_tracking
 
-class Net1(nn.Module):
-    def __init__(self):
-        super(Net1, self).__init__()
-        self.fc1 = nn.Linear(7, 10)  
-        self.fc2 = nn.Linear(10, 5)
-        self.fc3 = nn.Linear(5, 1)
-
-    def forward(self, x):
-        x = torch.sigmoid(self.fc1(x))
-        x = torch.sigmoid(self.fc2(x))
-        x = torch.sigmoid(self.fc3(x))*4/5*np.pi-2*np.pi/5 # restrict output to range [-2*pi/5, 2*pi/5]
-		
-        return x
-  
 class Net2(nn.Module):
 
     def __init__(self):
@@ -46,34 +32,7 @@ class Net2(nn.Module):
         x = torch.sigmoid(self.fc1(x))
         x = torch.sigmoid(self.fc2(x))
         x = torch.sigmoid(self.fc3(x))*4/5*np.pi-2*np.pi/5
-        return x
-
-def test_network(network,x_true,y_true,vel,t):
-	# Initialize truck simulator and control objects
-    ego = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
-    controller = NN2Control()
-    pid=StanleyPID()
-	
-    x = []
-    th1t=0
-    th2t=0
-    #do some  random stuff
-    ego2=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
-    
-    for i in range(0,len(t)):
-        
-        network=network.float()
-        state = ego.convert_world_state_to_front()
-        state1 = ego2.convert_world_state_to_front()
-        ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t,network)
-        ctrl_delta_pid, ctrl_vel_pid, err_pid, interr_pid, differr_pid = pid.calc_steer_control(t[i],state1,x_true,y_true, vel)
-        xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
-        x1,y1,delt,tha,thb=ego2.simulate_timestep([ctrl_vel_pid,ctrl_delta_pid])
-        x.append(err[0]*err[0])
-		
-    x=sum(x)/len(t)
-    return  x
- 
+        return x 
     
 def train_network(network): 
     rpg = RandomPathGenerator()
@@ -161,8 +120,6 @@ def train_network(network):
         pl+=loss.item()
         if (i%200==199)& (i<2000) :
             print(i)
-            MSE1=test_network(network,xt1,yt1,vel1,t12)
-            MSE.append(MSE1)
             loss_time.append(i)
         running_loss += loss.item()
 
@@ -180,7 +137,6 @@ def train_network(network):
     pl=0
     plot_loss=[]
     for i in range(0,len(t)):
-        
         network=network.float()
         state = ego.convert_world_state_to_front()
         state1 = ego2.convert_world_state_to_front()
@@ -191,11 +147,7 @@ def train_network(network):
         x1,y1,delt,tha,thb=ego2.simulate_timestep([ctrl_vel_pid1,ctrl_delta_pid1])
         xp.append(x1); yp.append(y1)
         x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
-
-
-
         inputs=np.concatenate((err,ctrl_vel,interr[0],differr[0]),axis=None)
-
         inputs=np.append(inputs, th1t-th2t)
         network_input=torch.tensor(inputs)
         network_target=torch.tensor(ctrl_delta_pid)
@@ -210,7 +162,6 @@ def train_network(network):
             plot_loss.append(pl/len(t)*20)
             loss_time.append(i)
             pl=0
-            
         running_loss += loss.item()
         for f in network.parameters():
             f.data.sub_(f.grad.data * learning_rate)
@@ -291,8 +242,6 @@ def main():
         if a=='1':
             break
 
-    
-    
     #Initialize varriables to run the first benchmark test  on the PID mimicking controller
     network=network.float()
 
@@ -348,9 +297,8 @@ def main():
     plt.legend(['Network Performance','True Path', 'PID Performance'])
     plt.show()
 
-
     #send the pid mimicking controller to the  evolutionary algorithm
-
+    print('bias   value before  evo: ', network.fc3.bias.data)
     evolution=EvolutionaryAlgorithm(network)
     for i in range(1000):
         print(i)
@@ -363,9 +311,24 @@ def main():
             Evo1=evolution.controllers[evolution.best_controller_idx].fc1.weight.data.numpy()
             Evo2=evolution.controllers[evolution.best_controller_idx].fc2.weight.data.numpy()
             Evo3=evolution.controllers[evolution.best_controller_idx].fc3.weight.data.numpy()
-            print(np.linalg.norm(Fc1-Evo1))
-            print(np.linalg.norm(Fc2-Evo2))
-            print(np.linalg.norm(Fc3-Evo3))
+            print((Fc1-Evo1))
+            print(np.linalg.norm((Fc1-Evo1)))
+            print((Fc2-Evo2))
+            print(np.linalg.norm((Fc2-Evo2)))
+            print((Fc3-Evo3))
+            print(np.linalg.norm((Fc3-Evo3)))
+            Fc1b=network.fc1.bias.data.numpy()
+            Fc2b=network.fc2.bias.data.numpy()
+            Fc3b=network.fc3.bias.data.numpy()
+            Evo1b=evolution.controllers[evolution.best_controller_idx].fc1.bias.data.numpy()
+            Evo2b=evolution.controllers[evolution.best_controller_idx].fc2.bias.data.numpy()
+            Evo3b=evolution.controllers[evolution.best_controller_idx].fc3.bias.data.numpy()
+            print((Fc1b-Evo1b))
+            print(np.linalg.norm((Fc1b-Evo1b)))
+            print((Fc2b-Evo2b))
+            print(np.linalg.norm((Fc2b-Evo2b)))
+            print((Fc3b-Evo3b))
+            print(np.linalg.norm((Fc3b-Evo3b)))
             controller = NN2Control()
             x_true=Benchmark1[:,0]
             y_true= Benchmark1[:,1]

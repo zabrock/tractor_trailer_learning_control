@@ -52,22 +52,29 @@ def trailer_mass_variation_test(network,num_tests=5):
     
     rpg = RandomPathGenerator()
     # Generate a random path
-    x_true, y_true, t, vel = rpg.get_harder_path(end_time=10,vel=25)
+    xs = []
+    ys = []
+    ts = []
+    vels = []
+    for i in range(0,num_tests):
+        x1,y1,t1,v1 = rpg.get_harder_path(end_time=10,vel=25)
+        xs.append(x1)
+        ys.append(y1)
+        ts.append(t1)
+        vels.append(v1)
     # Set trailer mass alpha values to be looped through
     alpha = np.linspace(0.1,2,num=20)
     pid_fitness = []
     nn_fitness = []
+    print('new')
     for i in range(0,len(alpha)):
         print('{} of {}'.format(i,len(alpha)))
-        # Start a new PID controller and ego_sims for both controllers
-        pid = StanleyPID()
-        nn = NN2Control()
-        ego_pid = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
-        ego_pid.modify_parameters(m2_alpha=alpha[i])
-        ego_nn = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
-        ego_nn.modify_parameters(m2_alpha=alpha[i])
         
         for j in range(0,num_tests):
+            x_true = xs[j]
+            y_true = ys[j]
+            t = ts[j]
+            vel = vels[j]
             # Start a new PID controller and ego_sims for both controllers
             pid = StanleyPID()
             nn = NN2Control()
@@ -95,7 +102,17 @@ def trailer_stiffness_variation_test(network,num_tests=5):
     
     rpg = RandomPathGenerator()
     # Generate a random path
-    x_true, y_true, t, vel = rpg.get_harder_path(end_time=10,vel=25)
+    xs = []
+    ys = []
+    ts = []
+    vels = []
+    for i in range(0,num_tests):
+        x1,y1,t1,v1 = rpg.get_harder_path(end_time=10,vel=25)
+        xs.append(x1)
+        ys.append(y1)
+        ts.append(t1)
+        vels.append(v1)
+        
     # Set trailer mass alpha values to be looped through
     alpha = np.linspace(0.1,2,num=20)
     pid_fitness = []
@@ -104,6 +121,10 @@ def trailer_stiffness_variation_test(network,num_tests=5):
         print('{} of {}'.format(i,len(alpha)))
 
         for j in range(0,num_tests):
+            x_true = xs[j]
+            y_true = ys[j]
+            t = ts[j]
+            vel = vels[j]
             # Start a new PID controller and ego_sims for both controllers
             pid = StanleyPID()
             nn = NN2Control()
@@ -129,23 +150,29 @@ def trailer_stiffness_variation_test(network,num_tests=5):
 def trailer_length_variation_test(network,num_tests=5):
     rpg = RandomPathGenerator()
     # Generate a random path
-    x_true, y_true, t, vel = rpg.get_harder_path(end_time=10,vel=25)
-    
+    xs = []
+    ys = []
+    ts = []
+    vels = []
+    for i in range(0,num_tests):
+        x1,y1,t1,v1 = rpg.get_harder_path(end_time=10,vel=25)
+        xs.append(x1)
+        ys.append(y1)
+        ts.append(t1)
+        vels.append(v1)
     alpha = np.linspace(0.1,2,num=20)
     
     pid_fitness = []
     nn_fitness = []
+    print('new')
     for i in range(0,len(alpha)):
         print('{} of {}'.format(i,len(alpha)))
-        # Start a new PID controller and ego_sims for both controllers
-        pid = StanleyPID()
-        nn = NN2Control()
-        ego_pid = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
-        ego_pid.modify_parameters(l2_alpha=alpha[i])
-        ego_nn = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
-        ego_nn.modify_parameters(l2_alpha=alpha[i])
         
         for j in range(0,num_tests):
+            x_true = xs[j]
+            y_true = ys[j]
+            t = ts[j]
+            vel = vels[j]
             # Start a new PID controller and ego_sims for both controllers
             pid = StanleyPID()
             nn = NN2Control()
@@ -201,7 +228,16 @@ def initial_displacement_test(network):
 def noisy_signal_test(network,num_tests=5):
     rpg = RandomPathGenerator()
     # Generate a random path
-    x_true, y_true, t, vel = rpg.get_harder_path(end_time=10,vel=25)
+    xs = []
+    ys = []
+    ts = []
+    vels = []
+    for i in range(0,num_tests):
+        x1,y1,t1,v1 = rpg.get_harder_path(end_time=10,vel=25)
+        xs.append(x1)
+        ys.append(y1)
+        ts.append(t1)
+        vels.append(v1)
     
     noise = np.linspace(0,0.2,num=20)
     
@@ -211,6 +247,10 @@ def noisy_signal_test(network,num_tests=5):
         print('{} of {}'.format(i,len(noise)))
         
         for j in range(0,num_tests):
+            x_true = xs[j]
+            y_true = ys[j]
+            t = ts[j]
+            vel = vels[j]
             # Start a new PID controller and ego_sims for both controllers
             pid = StanleyPID()
             nn = NN2Control()
@@ -256,6 +296,7 @@ def fitness_from_simulation_loop(controller,ego,t,x_true,y_true,vel,net=None,noi
         plt.title('Network')
     else:
         plt.title('PID')
+    plt.show()
     fitness, _ = calc_off_tracking(x, y, th1, th2, ego.P, x_true, y_true)
     return fitness
         

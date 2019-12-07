@@ -11,7 +11,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import pandas as pd
-import numpy as np
 from random_path_generator import RandomPathGenerator
 from ego_sim import EgoSim
 from stanley_pid import StanleyPID
@@ -19,21 +18,9 @@ from nn2_control import NN2Control
 import matplotlib.pyplot as plt
 from evolutionary_algorithm import EvolutionaryAlgorithm
 from Min_dist_test import calc_off_tracking
+import test_suite
 
-class Net1(nn.Module):
-    def __init__(self):
-        super(Net1, self).__init__()
-        self.fc1 = nn.Linear(7, 10)  
-        self.fc2 = nn.Linear(10, 5)
-        self.fc3 = nn.Linear(5, 1)
 
-    def forward(self, x):
-        x = torch.sigmoid(self.fc1(x))
-        x = torch.sigmoid(self.fc2(x))
-        x = torch.sigmoid(self.fc3(x))*4/5*np.pi-2*np.pi/5 # restrict output to range [-2*pi/5, 2*pi/5]
-        
-        return x
-  
 class Net2(nn.Module):
 
     def __init__(self):
@@ -46,6 +33,7 @@ class Net2(nn.Module):
         x = torch.sigmoid(self.fc1(x))
         x = torch.sigmoid(self.fc2(x))
         x = torch.sigmoid(self.fc3(x))*4/5*np.pi-2*np.pi/5
+
         return x
 
 def test_network(network,x_true,y_true,vel,t):
@@ -73,8 +61,7 @@ def test_network(network,x_true,y_true,vel,t):
         
     x=sum(x)/len(t)
     return  x
- 
-    
+     
 def train_network(network,k_crosstrack,k_heading): 
     rpg = RandomPathGenerator()
     x_true, y_true, t, vel = rpg.get_harder_path()
@@ -100,29 +87,36 @@ def train_network(network,k_crosstrack,k_heading):
     #do some  random stuff
     ego2=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
     
-#    for i in range(0,len(t)):
-#        
-#        network=network.float()
-#        state = ego.convert_world_state_to_front()
-#        state1 = ego2.convert_world_state_to_front()
-#        ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t,network)
-#        ctrl_delta_pid, ctrl_vel_pid, err_pid, interr_pid, differr_pid = pid.calc_steer_control(t[i],state1,x_true,y_true, vel)
-#
-#        xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
-#        x1,y1,delt,tha,thb=ego2.simulate_timestep([ctrl_vel_pid,ctrl_delta_pid])
-#        xp.append(x1); yp.append(y1)
-#        x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
-#
-#        inputs=np.concatenate((err,ctrl_vel,interr[0],differr[0]),axis=None)
-#        inputs=np.append(inputs,th1t-th2t)
-#
-#        network_input=torch.tensor(inputs)
-#
-#        network= network.double()
-#
-#        out=network(network_input)
-#
-#    print(running_loss)
+    for i in range(0,len(t)):
+        
+        network=network.float()
+        state = ego.convert_world_state_to_front()
+        state1 = ego2.convert_world_state_to_front()
+        ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t,network)
+        ctrl_delta_pid, ctrl_vel_pid, err_pid, interr_pid, differr_pid = pid.calc_steer_control(t[i],state1,x_true,y_true, vel)
+
+        xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+        x1,y1,delt,tha,thb=ego2.simulate_timestep([ctrl_vel_pid,ctrl_delta_pid])
+        xp.append(x1); yp.append(y1)
+        x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
+
+        inputs=np.concatenate((err,ctrl_vel,interr[0],differr[0]),axis=None)
+        inputs=np.append(inputs,th1t-th2t)
+
+        network_input=torch.tensor(inputs)
+
+        network= network.double()
+
+        out=network(network_input)
+
+    print(running_loss)
+    plt.plot(x,y)
+    plt.plot(x_true,y_true,'r--')
+    plt.plot(xp,yp,'g--')
+    plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.xlabel('X location, (m)')
+    plt.ylabel('Y Location, (m)')
+    plt.show()
 
     running_loss=0
     x = []
@@ -139,7 +133,7 @@ def train_network(network,k_crosstrack,k_heading):
     MSE1=0
     th1t=0
     th2t=0
-    for i in range(20000):
+    for i in range(200000):
         pid_list=pid.control_from_random_error()
         input1=pid_list[0:3]
         input2=pid_list[4:]
@@ -159,16 +153,21 @@ def train_network(network,k_crosstrack,k_heading):
         loss = criterion(out, network_target)
         loss.backward()
         pl+=loss.item()
-        if (i%1000==999):
+        if (i%200==199) :
             print(i)
-#            MSE1=test_network(network,xt1,yt1,vel1,t12)
-#            MSE.append(MSE1)
-#            loss_time.append(i)
+            loss_time.append(i)
+            plot_loss.append(pl/200)
+            pl=0
+
         running_loss += loss.item()
 
         for f in network.parameters():
             f.data.sub_(f.grad.data * learning_rate)
     print(running_loss)
+    plt.plot(loss_time,plot_loss)
+    plt.xlabel('Iteration Number')
+    plt.ylabel('Average Loss of Past 200 Iterations, (rad)')
+    plt.show()
     #follow the path
     running_loss=0
 
@@ -180,7 +179,6 @@ def train_network(network,k_crosstrack,k_heading):
     pl=0
     plot_loss=[]
     for i in range(0,len(t)):
-        
         network=network.float()
         state = ego.convert_world_state_to_front()
         state1 = ego2.convert_world_state_to_front()
@@ -191,9 +189,7 @@ def train_network(network,k_crosstrack,k_heading):
         x1,y1,delt,tha,thb=ego2.simulate_timestep([ctrl_vel_pid1,ctrl_delta_pid1])
         xp.append(x1); yp.append(y1)
         x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
-
         inputs=np.concatenate((err,ctrl_vel,interr[0],differr[0]),axis=None)
-
         inputs=np.append(inputs, th1t-th2t)
         network_input=torch.tensor(inputs)
         network_target=torch.tensor(ctrl_delta_pid)
@@ -208,7 +204,6 @@ def train_network(network,k_crosstrack,k_heading):
             plot_loss.append(pl/len(t)*20)
             loss_time.append(i)
             pl=0
-            
         running_loss += loss.item()
         for f in network.parameters():
             f.data.sub_(f.grad.data * learning_rate)
@@ -216,6 +211,8 @@ def train_network(network,k_crosstrack,k_heading):
     plt.plot(x_true,y_true,'r--')
     plt.plot(xp,yp,'g--')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.xlabel('X location, (m)')
+    plt.ylabel('Y Location, (m)')
     plt.show()
     
 def train_nn_from_pid(k_crosstrack = {'P':20, 'I':2, 'D':5}, 
@@ -351,21 +348,73 @@ def main():
 
     
     #Train the network until it is sufficient, asking the human operator for input on whether the point it reached  is  good enough
-#    network=network.float()
-#    for i in range(10):
-#        train_network(network)
-#        a=input('is this good enough?')
-#        if a=='1':
-#            break
-    k_crosstrack = [{'P':1, 'I':0, 'D':0}, {'P':5, 'I':0, 'D':0}, {'P':10, 'I':0, 'D':0}, {'P':5, 'I':0.1, 'D':0.1}, {'P':10, 'I':0.1, 'D':0.5}]
-    k_heading = [{'P':-1, 'I':0, 'D':0}, {'P':-1, 'I':0, 'D':0}, {'P':-1, 'I':0, 'D':0}, {'P':-1, 'I':0, 'D':0}, {'P':-1, 'I':0, 'D':0}]
-    networks = [train_nn_from_pid() for k_ct,k_hd in zip(k_crosstrack[0:2],k_heading[0:2])]
-    
-    for network in networks:
-        test_network_on_benchmark(network,Benchmark1)
+    network=network.float()
+    for i in range(10):
+        train_network(network)
+        a=input('is this good enough?')
+        if a=='1':
+            break
 
-    #send the pid mimicking controllers to the evolutionary algorithm
-    evolution=EvolutionaryAlgorithm(networks)
+    #Initialize varriables to run the first benchmark test  on the PID mimicking controller
+    network=network.float()
+
+    controller = NN2Control()
+    x_true=Benchmark1[:,0]
+    y_true= Benchmark1[:,1]
+    t= Benchmark1[:,2]
+    vel=Benchmark1[:,3]
+    xp=[]
+    yp=[]
+    x=[]
+    y=[]
+    pid=StanleyPID()
+    
+    #Run the same benchmark on both the PID controller and the PID mimicking network and compare  the two
+    for i in  range(2):
+        ego=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+        print('controller: ', i)
+        th1t=0
+        th2t=0
+        th1=[]
+        th2=[]
+        x_truck=[]
+        y_truck=[]
+        for j in range(len(t)):
+            if i == 1:
+                state = ego.convert_world_state_to_front()
+                ctrl_delta, ctrl_vel, err, interr, differr = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
+                xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+                x_truck.append(xt)
+                y_truck.append(yt)
+                th1.append(th1t)
+                th2.append(th2t)
+                xp.append(xt); yp.append(yt)
+            else:
+                state = ego.convert_world_state_to_front()
+                ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t, network)
+                xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+                x_truck.append(xt)
+                y_truck.append(yt)
+                th1.append(th1t)
+                th2.append(th2t)
+                x.append(xt); y.append(yt);
+        if i == 1:
+            pid_fitness, CTerr =calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
+        else:
+            controller_fitness, CTerr = calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
+    print('Benchmark 1 PID fitness: ', pid_fitness)
+    print('Benchmark 1 controller fitness: ', controller_fitness)
+    plt.plot(x,y)
+    plt.plot(x_true,y_true,'r--')
+    plt.plot(xp,yp,'g--')
+    plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.xlabel('X location, (m)')
+    plt.ylabel('Y Location, (m)')
+    plt.show()
+
+    #send the pid mimicking controller to the  evolutionary algorithm
+    print('bias   value before  evo: ', network.fc3.bias.data)
+    evolution=EvolutionaryAlgorithm(network)
     for i in range(1000):
         print(i)
         evolution.iterate()
@@ -377,9 +426,24 @@ def main():
             Evo1=evolution.controllers[evolution.best_controller_idx].fc1.weight.data.numpy()
             Evo2=evolution.controllers[evolution.best_controller_idx].fc2.weight.data.numpy()
             Evo3=evolution.controllers[evolution.best_controller_idx].fc3.weight.data.numpy()
-            print(np.linalg.norm(Fc1-Evo1))
-            print(np.linalg.norm(Fc2-Evo2))
-            print(np.linalg.norm(Fc3-Evo3))
+            print((Fc1-Evo1))
+            print(np.linalg.norm((Fc1-Evo1)))
+            print((Fc2-Evo2))
+            print(np.linalg.norm((Fc2-Evo2)))
+            print((Fc3-Evo3))
+            print(np.linalg.norm((Fc3-Evo3)))
+            Fc1b=network.fc1.bias.data.numpy()
+            Fc2b=network.fc2.bias.data.numpy()
+            Fc3b=network.fc3.bias.data.numpy()
+            Evo1b=evolution.controllers[evolution.best_controller_idx].fc1.bias.data.numpy()
+            Evo2b=evolution.controllers[evolution.best_controller_idx].fc2.bias.data.numpy()
+            Evo3b=evolution.controllers[evolution.best_controller_idx].fc3.bias.data.numpy()
+            print((Fc1b-Evo1b))
+            print(np.linalg.norm((Fc1b-Evo1b)))
+            print((Fc2b-Evo2b))
+            print(np.linalg.norm((Fc2b-Evo2b)))
+            print((Fc3b-Evo3b))
+            print(np.linalg.norm((Fc3b-Evo3b)))
             controller = NN2Control()
             x_true=Benchmark1[:,0]
             y_true= Benchmark1[:,1]
@@ -436,6 +500,8 @@ def main():
             plt.plot(x_true,y_true,'r--')
             plt.plot(xp,yp,'g--')
             plt.legend(['Network Performance','True Path', 'PID Performance'])
+            plt.xlabel('X location, (m)')
+            plt.ylabel('Y Location, (m)')
             plt.show()
     
     #Initialize varriables to run the first benchmark test
@@ -496,6 +562,8 @@ def main():
     plt.plot(x_true,y_true,'r--')
     plt.plot(xp,yp,'g--')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.xlabel('X location, (m)')
+    plt.ylabel('Y Location, (m)')
     plt.show()
     
     #Initialize varriables to run the second benchmark test on the controller trained on the
@@ -557,6 +625,8 @@ def main():
     plt.plot(x_true,y_true,'r--')
     plt.plot(xp,yp,'g--')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.xlabel('X location, (m)')
+    plt.ylabel('Y Location, (m)')
     plt.show()
     x_true=Benchmark3[:,0]
     y_true= Benchmark3[:,1]
@@ -617,6 +687,8 @@ def main():
     plt.plot(x_true,y_true,'r--')
     plt.plot(xp,yp,'g--')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.xlabel('X location, (m)')
+    plt.ylabel('Y Location, (m)')
     plt.show()
     # 
     #controller=NNControl()

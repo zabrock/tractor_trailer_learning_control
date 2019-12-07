@@ -21,21 +21,21 @@ import matplotlib.pyplot as  plt
 class EvolutionaryAlgorithm(object):
     def __init__(self,nn_controller,pop_size=10,pct_weight_variation=0.2):
         # Save number of controllers to keep through each iteration
-        print('bias value in start of evo',nn_controller.fc3.bias.data)
+        #print('bias value in start of evo',nn_controller.fc3.bias.data)
         self.pop_size = pop_size
         self.pid_fitness=0
         # Save the percent weight variation to use when permutating controllers
         self.pct_weight_var = pct_weight_variation
         nn_controller=nn_controller.float()
         temp_controllers = pickle.loads(pickle.dumps(nn_controller))
-        print('bias value in temp of evo',temp_controllers.fc3.bias.data)
+        #print('bias value in temp of evo',temp_controllers.fc3.bias.data)
         # Initialize population of controllers randomly perturbed from the input controller
         self.controllers=[nn_controller,nn_controller,nn_controller,nn_controller,nn_controller]
         for i in range(4):
             self.controllers[i] = self.permutate_controller(temp_controllers)
         
-        for i in  range(len(self.controllers)):
-            print('bias value in end of evo',self.controllers[i].fc3.bias.data)
+        #for i in  range(len(self.controllers)):
+            #print('bias value in end of evo',self.controllers[i].fc3.bias.data)
         fitnesses = self.evaluate_fitness()
         
         # Save the best controller's index
@@ -53,39 +53,39 @@ class EvolutionaryAlgorithm(object):
         #print('nn_weight data',nn_controller.fc1.weight.data)
         nn_controller= pickle.loads(pickle.dumps(nn_controller_orig))
         nn_controller=nn_controller.float()
-        print('start permute: ',nn_controller.fc3.bias.data)
+        #print('start permute: ',nn_controller.fc3.bias.data)
         temp=list(nn_controller.fc1.weight.data.shape)
         weight_add=torch.rand(temp)
 
         weight_add=(-0.5+weight_add)/np.linalg.norm(weight_add)
 
-        nn_controller.fc1.weight.data=nn_controller.fc1.weight.data+weight_add
+        nn_controller.fc1.weight.data=nn_controller.fc1.weight.data+weight_add*5
         #modify the weights of the 2nd layer
         temp=list(nn_controller.fc2.weight.data.shape)
         weight_add=torch.rand(temp)
         weight_add=(-0.5+weight_add)/np.linalg.norm(weight_add)
-        nn_controller.fc2.weight.data=nn_controller.fc2.weight.data+weight_add
+        nn_controller.fc2.weight.data=nn_controller.fc2.weight.data+weight_add*5
         #modify the weights of the 3rd layer
         temp=list(nn_controller.fc3.weight.data.shape)
         weight_add=torch.rand(temp)
         weight_add=(-0.5+weight_add)/np.linalg.norm(weight_add)
-        nn_controller.fc3.weight.data=nn_controller.fc3.weight.data+weight_add*0.5
+        nn_controller.fc3.weight.data=nn_controller.fc3.weight.data+weight_add*2.5
         #modify the biases of the 1st layer
         temp=list(nn_controller.fc1.bias.data.shape)
         weight_add=torch.rand(temp)
         weight_add=(-0.5+weight_add)/np.linalg.norm(weight_add)
-        nn_controller.fc1.bias.data=nn_controller.fc1.bias.data+weight_add*0.2
+        nn_controller.fc1.bias.data=nn_controller.fc1.bias.data+weight_add*1
         #modify the biases of the 2nd layer
         temp=list(nn_controller.fc2.bias.data.shape)
         weight_add=torch.rand(temp)
         weight_add=(-0.5+weight_add)/np.linalg.norm(weight_add)
-        nn_controller.fc2.bias.data=nn_controller.fc2.bias.data+weight_add*0.2
+        nn_controller.fc2.bias.data=nn_controller.fc2.bias.data+weight_add*1
         #modify the biases of the 3rd layer
         temp=list(nn_controller.fc3.bias.data.shape)
         weight_add=torch.rand(temp)
         weight_add=(-0.5+weight_add)
-        nn_controller.fc3.bias.data=nn_controller.fc3.bias.data+weight_add*0.01
-        print('end permute: ',nn_controller.fc3.bias.data)
+        nn_controller.fc3.bias.data=nn_controller.fc3.bias.data+weight_add*0.2
+        #print('end permute: ',nn_controller.fc3.bias.data)
         
         return nn_controller
     
@@ -112,7 +112,7 @@ class EvolutionaryAlgorithm(object):
             #print(vel)    
             ego=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
             controller = NN2Control()
-            #print('controller: ', i)
+            print('controller: ', i)
             th1t=0
             th2t=0
             th1=[]
@@ -158,9 +158,9 @@ class EvolutionaryAlgorithm(object):
         # Pick a network to modify using the epsilon-greedy method
         prob = np.random.random()
         if prob > epsilon:
-            new_ctrlr = copy.deepcopy(self.controllers[self.best_controller_idx])
+            new_ctrlr = pickle.loads(pickle.dumps(self.controllers[self.best_controller_idx]))
         else:
-            new_ctrlr = copy.deepcopy(random.choice(self.controllers))
+            new_ctrlr = pickle.loads(pickle.dumps(random.choice(self.controllers)))
             
         # Randomly modify the network parameters and add it to the pool
         for i in  range(10):
@@ -188,7 +188,7 @@ class EvolutionaryAlgorithm(object):
         '''
         best_controller=np.argsort(self.controller_fitness[0:10])
         new_controllers=copy.deepcopy(self.controllers[0:10])
-        new_controller_fitness=copy.deepcopy(self.controller_fitness)
+        new_controller_fitness=copy.deepcopy(self.controller_fitness[0:10])
         for i in range(10):
             new_controllers[i]=self.controllers[best_controller[i]]
             new_controller_fitness[i]=self.controller_fitness[best_controller[i]]

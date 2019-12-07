@@ -119,7 +119,7 @@ class StanleyPID(object):
 		elif ctrl_delta < -2*np.pi/5:
 			ctrl_delta = -2*np.pi/5
 				
-		output = [ct_err, hd_err, ctrl_vel, ctrl_delta, ct_int, ct_diff]
+		output = [ct_err, hd_err, ctrl_vel, ctrl_delta, ct_diff, ct_int]
 		return output
 		
 def calc_path_error(state,path_x,path_y,I_min):

@@ -11,7 +11,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import pandas as pd
-import numpy as np
 from random_path_generator import RandomPathGenerator
 from ego_sim import EgoSim
 from stanley_pid import StanleyPID
@@ -19,6 +18,7 @@ from nn2_control import NN2Control
 import matplotlib.pyplot as plt
 from evolutionary_algorithm import EvolutionaryAlgorithm
 from Min_dist_test import calc_off_tracking
+import test_suite
 
 class Net2(nn.Module):
 
@@ -82,7 +82,13 @@ def train_network(network):
         out=network(network_input)
 
     print(running_loss)
-
+    plt.plot(x,y)
+    plt.plot(x_true,y_true,'r--')
+    plt.plot(xp,yp,'g--')
+    plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.xlabel('X location, (m)')
+    plt.ylabel('Y Location, (m)')
+    plt.show()
     running_loss=0
     x = []
     y = []
@@ -98,7 +104,7 @@ def train_network(network):
     MSE1=0
     th1t=0
     th2t=0
-    for i in range(20000):
+    for i in range(200000):
         pid_list=pid.control_from_random_error()
         input1=pid_list[0:3]
         input2=pid_list[4:]
@@ -118,14 +124,20 @@ def train_network(network):
         loss = criterion(out, network_target)
         loss.backward()
         pl+=loss.item()
-        if (i%200==199)& (i<2000) :
+        if (i%200==199) :
             print(i)
             loss_time.append(i)
+            plot_loss.append(pl/200)
+            pl=0
         running_loss += loss.item()
 
         for f in network.parameters():
             f.data.sub_(f.grad.data * learning_rate)
     print(running_loss)
+    plt.plot(loss_time,plot_loss)
+    plt.xlabel('Iteration Number')
+    plt.ylabel('Average Loss of Past 200 Iterations, (rad)')
+    plt.show()
     #follow the path
     running_loss=0
 
@@ -169,6 +181,8 @@ def train_network(network):
     plt.plot(x_true,y_true,'r--')
     plt.plot(xp,yp,'g--')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.xlabel('X location, (m)')
+    plt.ylabel('Y Location, (m)')
     plt.show()
     
 
@@ -295,6 +309,8 @@ def main():
     plt.plot(x_true,y_true,'r--')
     plt.plot(xp,yp,'g--')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.xlabel('X location, (m)')
+    plt.ylabel('Y Location, (m)')
     plt.show()
 
     #send the pid mimicking controller to the  evolutionary algorithm
@@ -385,6 +401,8 @@ def main():
             plt.plot(x_true,y_true,'r--')
             plt.plot(xp,yp,'g--')
             plt.legend(['Network Performance','True Path', 'PID Performance'])
+            plt.xlabel('X location, (m)')
+            plt.ylabel('Y Location, (m)')
             plt.show()
     
     #Initialize varriables to run the first benchmark test
@@ -445,6 +463,8 @@ def main():
     plt.plot(x_true,y_true,'r--')
     plt.plot(xp,yp,'g--')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.xlabel('X location, (m)')
+    plt.ylabel('Y Location, (m)')
     plt.show()
     
     #Initialize varriables to run the second benchmark test on the controller trained on the
@@ -506,6 +526,8 @@ def main():
     plt.plot(x_true,y_true,'r--')
     plt.plot(xp,yp,'g--')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.xlabel('X location, (m)')
+    plt.ylabel('Y Location, (m)')
     plt.show()
     x_true=Benchmark3[:,0]
     y_true= Benchmark3[:,1]
@@ -566,6 +588,8 @@ def main():
     plt.plot(x_true,y_true,'r--')
     plt.plot(xp,yp,'g--')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.xlabel('X location, (m)')
+    plt.ylabel('Y Location, (m)')
     plt.show()
     # 
     #controller=NNControl()

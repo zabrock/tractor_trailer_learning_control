@@ -70,6 +70,8 @@ def trailer_mass_variation_test(network,num_tests=5):
     for i in range(0,len(alpha)):
         print('{} of {}'.format(i,len(alpha)))
         
+        pid_temp = []
+        nn_temp = []
         for j in range(0,num_tests):
             x_true = xs[j]
             y_true = ys[j]
@@ -82,8 +84,10 @@ def trailer_mass_variation_test(network,num_tests=5):
             ego_pid.modify_parameters(m2_alpha=alpha[i])
             ego_nn = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
             ego_nn.modify_parameters(m2_alpha=alpha[i])
-            pid_fitness.append(fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None))
-            nn_fitness.append(fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network))
+            pid_temp.append(fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None))
+            nn_temp.append(fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network))
+        pid_fitness.append(pid_temp)
+        nn_fitness.append(nn_temp)
         
     pid_fitness_avg = [np.mean(fitness) for fitness in pid_fitness]
     nn_fitness_avg = [np.mean(fitness) for fitness in nn_fitness]
@@ -120,6 +124,8 @@ def trailer_stiffness_variation_test(network,num_tests=5):
     for i in range(0,len(alpha)):
         print('{} of {}'.format(i,len(alpha)))
 
+        pid_temp = []
+        nn_temp = []
         for j in range(0,num_tests):
             x_true = xs[j]
             y_true = ys[j]
@@ -132,8 +138,10 @@ def trailer_stiffness_variation_test(network,num_tests=5):
             ego_pid.modify_parameters(Ctrailer_alpha=alpha[i])
             ego_nn = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
             ego_nn.modify_parameters(Ctrailer_alpha=alpha[i])
-            pid_fitness.append(fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None))
-            nn_fitness.append(fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network))
+            pid_temp.append(fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None))
+            nn_temp.append(fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network))
+        pid_fitness.append(pid_temp)
+        nn_fitness.append(nn_temp)
         
     pid_fitness_avg = [np.mean(fitness) for fitness in pid_fitness]
     nn_fitness_avg = [np.mean(fitness) for fitness in nn_fitness]
@@ -168,6 +176,8 @@ def trailer_length_variation_test(network,num_tests=5):
     for i in range(0,len(alpha)):
         print('{} of {}'.format(i,len(alpha)))
         
+        pid_temp = []
+        nn_temp = []
         for j in range(0,num_tests):
             x_true = xs[j]
             y_true = ys[j]
@@ -180,9 +190,10 @@ def trailer_length_variation_test(network,num_tests=5):
             ego_pid.modify_parameters(Ctrailer_alpha=alpha[i])
             ego_nn = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
             ego_nn.modify_parameters(Ctrailer_alpha=alpha[i])
-            pid_fitness.append(fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None))
-            nn_fitness.append(fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network))
-        
+            pid_temp.append(fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None))
+            nn_temp.append(fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network))
+        pid_fitness.append(pid_temp)
+        nn_fitness.append(nn_temp)
     pid_fitness_avg = [np.mean(fitness) for fitness in pid_fitness]
     nn_fitness_avg = [np.mean(fitness) for fitness in nn_fitness]
     pid_fitness_std = [np.std(fitness) for fitness in pid_fitness]
@@ -246,6 +257,8 @@ def noisy_signal_test(network,num_tests=5):
     for i in range(0,len(noise)):
         print('{} of {}'.format(i,len(noise)))
         
+        pid_temp = []
+        nn_temp = []
         for j in range(0,num_tests):
             x_true = xs[j]
             y_true = ys[j]
@@ -257,9 +270,10 @@ def noisy_signal_test(network,num_tests=5):
             ego_pid = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
             ego_nn = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
     
-            pid_fitness.append(fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None,noise=noise[i]))
-            nn_fitness.append(fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network,noise=noise[i]))
-        
+            pid_temp.append(fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None,noise=noise[i]))
+            nn_temp.append(fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network,noise=noise[i]))
+        pid_fitness.append(pid_temp)
+        nn_fitness.append(nn_temp)
     pid_fitness_avg = [np.mean(fitness) for fitness in pid_fitness]
     nn_fitness_avg = [np.mean(fitness) for fitness in nn_fitness]
     pid_fitness_std = [np.std(fitness) for fitness in pid_fitness]

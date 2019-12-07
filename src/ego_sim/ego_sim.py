@@ -67,7 +67,7 @@ class EgoSim(object):
 		P['Cq1'] = P['a1']**2*P['C1'] + P['b1']**2*(P['C2']+P['C3'])
 		self.P = P
 		
-	def modify_parameters(self,m1_alpha=1,m2_alpha=1,Csteer_alpha=1,Cdrive_alpha=1,Ctrailer_alpha=1):
+	def modify_parameters(self,m1_alpha=1,m2_alpha=1,Csteer_alpha=1,Cdrive_alpha=1,Ctrailer_alpha=1,l2_alpha=1):
 		'''
 		Modifies loading conditions and tire stiffness for the truck and trailer.
 		'''
@@ -80,6 +80,9 @@ class EgoSim(object):
 		self.P['C3'] = Cdrive_alpha*130274.0*4
 		self.P['C4'] = Ctrailer_alpha*115000.0*4
 		self.P['C5'] = Ctrailer_alpha*115000.0*4
+		self.P['l2'] = l2_alpha*(16.104-0.914-3.083-1.2446/2)
+		self.P['a2'] = l2_alpha*5.9336
+		self.P['b2'] = l2_alpha*5.5511
 		
 		
 	def calculate_mass_matrix(self):

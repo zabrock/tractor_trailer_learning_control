@@ -6,6 +6,7 @@ Created on Wed Nov  6 12:23:05 2019
 @author: Zeke
 """
 import numpy as np
+import matplotlib.pyplot as plt
 
 class StanleyPID(object):
 	def __init__(self,k_crosstrack = {'P':20, 'I':2, 'D':5}, 
@@ -34,7 +35,7 @@ class StanleyPID(object):
 		self.last_closest_idx = 0
 		self.t_d1 = 0
 		
-	def calc_steer_control(self,t,state,path_x,path_y,path_vel):
+	def calc_steer_control(self,t,state,path_x,path_y,path_vel, noise=None):
 		'''
 		Calculates steering control given a path and current state.
 		
@@ -68,6 +69,10 @@ class StanleyPID(object):
 		ctrl_vel = path_vel[I_min]
 		# Find cross-track and heading error between the current ppsition and desired path
 		ct_err, hd_err = calc_path_error(state,path_x,path_y,I_min)
+		if noise is not None:
+			added_noise = np.random.normal(0,noise/3)
+			ct_err = (1+added_noise)*ct_err
+			hd_err = (1+added_noise)*hd_err
 		err = np.array([ct_err,hd_err])
 		# Compute desired steering angle
 		Ts = t - self.t_d1
@@ -95,19 +100,21 @@ class StanleyPID(object):
 		
 		return ctrl_delta, ctrl_vel, err, self.err_int, err_diff
 	
-	def control_from_random_error(self,ct_err_width=50,ct_int_width=100,hd_int_width=10,ct_diff_width=3,hd_diff_width=1):
+	def control_from_random_error(self,ct_err_width=5,ct_int_width=1,hd_int_width=1,ct_diff_width=1,hd_diff_width=1,hd_err=None,ctrl_vel=None):
 		'''
 		Calculates what the Stanley PID control signal would be for a random cross-tracking
 		error and heading error, integral error, and derivative error.
 		'''
 		ct_err = 2*ct_err_width*np.random.random() - ct_err_width
-		hd_err = 2*np.pi*np.random.random() - np.pi
+		if hd_err is None:
+			hd_err = 2*np.pi*np.random.random() - np.pi
 		ct_int = 2*ct_int_width*np.random.normal() - ct_int_width
 		ct_diff = 2*ct_diff_width*np.random.normal() - ct_diff_width
 		hd_int = 2*hd_int_width*np.random.normal() - hd_int_width
 		hd_diff = 2*hd_diff_width*np.random.normal() - hd_diff_width
 		
-		ctrl_vel = 30*np.random.random() + 1
+		if ctrl_vel is None:
+			ctrl_vel = 30*np.random.random() + 1
 		
 		ctrl_delta = self.k_hd['P']*hd_err + self.k_hd['I']*hd_int + \
 				self.k_hd['D']*hd_diff + np.arctan2(self.k_ct['P']*ct_err + \
@@ -121,6 +128,19 @@ class StanleyPID(object):
 				
 		output = [ct_err, hd_err, ctrl_vel, ctrl_delta, ct_diff, ct_int]
 		return output
+	
+	def control_from_error(self,ct_err,ct_int,ct_diff,hd_err,hd_int,hd_diff,ctrl_vel):
+		ctrl_delta = self.k_hd['P']*hd_err + self.k_hd['I']*hd_int + \
+				self.k_hd['D']*hd_diff + np.arctan2(self.k_ct['P']*ct_err + \
+				self.k_ct['I']*ct_int + self.k_ct['D']*ct_diff, ctrl_vel)
+				
+		# Limit the steer angle command
+		if ctrl_delta > 2*np.pi/5:
+			ctrl_delta = 2*np.pi/5
+		elif ctrl_delta < -2*np.pi/5:
+			ctrl_delta = -2*np.pi/5
+			
+		return ctrl_delta
 		
 def calc_path_error(state,path_x,path_y,I_min):
 	'''
@@ -249,6 +269,25 @@ def wrap_to_pi(angle):
 		wrap -= 2*np.pi * np.sign(wrap)
 	return wrap
 
-
+if __name__ == "__main__":
+	pid = StanleyPID({'P':5, 'I':0, 'D':0},{'P':-1, 'I':0, 'D':0})
+	ct_list = []
+	hd_list = []
+	vel_list = []
+	delta_list = []
+	ct_int_list = []
+	ct_diff_list = []
+	for i in range(0,20000):
+		[ct_err, hd_err, ctrl_vel, ctrl_delta, ct_int, ct_diff] = pid.control_from_random_error()
+		ct_list.append(ct_err)
+		hd_list.append(hd_err)
+		vel_list.append(ctrl_vel)
+		delta_list.append(ctrl_delta)
+		ct_int_list.append(ct_int)
+		ct_diff_list.append(ct_diff)
+		
+	plt.hist(delta_list)
+	
+	
 #pid = StanleyPID()
 #print(pid.control_from_random_error())

@@ -20,6 +20,7 @@ from evolutionary_algorithm import EvolutionaryAlgorithm
 from Min_dist_test import calc_off_tracking
 import test_suite
 
+
 class Net2(nn.Module):
 
     def __init__(self):
@@ -32,19 +33,46 @@ class Net2(nn.Module):
         x = torch.sigmoid(self.fc1(x))
         x = torch.sigmoid(self.fc2(x))
         x = torch.sigmoid(self.fc3(x))*4/5*np.pi-2*np.pi/5
-        return x 
+
+        return x
+
+def test_network(network,x_true,y_true,vel,t):
+    # Initialize truck simulator and control objects
+    ego = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+    controller = NN2Control()
+    pid=StanleyPID()
     
-def train_network(network): 
+    x = []
+    th1t=0
+    th2t=0
+    #do some random stuff
+    ego2=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+    
+    for i in range(0,len(t)):
+        
+        network=network.float()
+        state = ego.convert_world_state_to_front()
+        state1 = ego2.convert_world_state_to_front()
+        ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t,network)
+        ctrl_delta_pid, ctrl_vel_pid, err_pid, interr_pid, differr_pid = pid.calc_steer_control(t[i],state1,x_true,y_true, vel)
+        xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+        x1,y1,delt,tha,thb=ego2.simulate_timestep([ctrl_vel_pid,ctrl_delta_pid])
+        x.append(err[0]*err[0])
+        
+    x=sum(x)/len(t)
+    return  x
+     
+def train_network(network,k_crosstrack,k_heading): 
     rpg = RandomPathGenerator()
-    x_true, y_true, t, vel = rpg.get_random_path()
+    x_true, y_true, t, vel = rpg.get_harder_path()
     xt1=x_true
     yt1=y_true
     t12=t
     vel1=vel
     ego = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
     controller = NN2Control()
-    pid=StanleyPID()
-    pid2=StanleyPID()
+    pid=StanleyPID(k_crosstrack=k_crosstrack,k_heading=k_heading)
+    pid2=StanleyPID(k_crosstrack=k_crosstrack,k_heading=k_heading)
     learning_rate=0.01
     x = []
     y = []
@@ -89,6 +117,7 @@ def train_network(network):
     plt.xlabel('X location, (m)')
     plt.ylabel('Y Location, (m)')
     plt.show()
+
     running_loss=0
     x = []
     y = []
@@ -129,6 +158,7 @@ def train_network(network):
             loss_time.append(i)
             plot_loss.append(pl/200)
             pl=0
+
         running_loss += loss.item()
 
         for f in network.parameters():
@@ -144,8 +174,8 @@ def train_network(network):
     ego = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
     ego2=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
     controller = NN2Control()
-    pid=StanleyPID()
-    pid2=StanleyPID()
+    pid=StanleyPID(k_crosstrack=k_crosstrack,k_heading=k_heading)
+    pid2=StanleyPID(k_crosstrack=k_crosstrack,k_heading=k_heading)
     pl=0
     plot_loss=[]
     for i in range(0,len(t)):
@@ -185,10 +215,79 @@ def train_network(network):
     plt.ylabel('Y Location, (m)')
     plt.show()
     
-
-def main():
+def train_nn_from_pid(k_crosstrack = {'P':20, 'I':2, 'D':5}, 
+              k_heading = {'P':-0.5, 'I':0, 'D':0}):
     network=Net2()
     network.zero_grad()
+    #Train the network until it is sufficient, asking the human operator for input on whether the point it reached  is  good enough
+    network=network.float()
+    for i in range(10):
+        train_network(network,k_crosstrack,k_heading)
+        a=input('is this good enough?')
+        if a=='1':
+            break
+        
+    return network
+
+def test_network_on_benchmark(network,Benchmark):
+    #Initialize varriables to run the first benchmark test  on the PID mimicking controller
+    network=network.float()
+
+    controller = NN2Control()
+    x_true=Benchmark[:,0]
+    y_true= Benchmark[:,1]
+    t= Benchmark[:,2]
+    vel=Benchmark[:,3]
+    xp=[]
+    yp=[]
+    x=[]
+    y=[]
+    pid=StanleyPID()
+    
+    #Run the same benchmark on both the PID controller and the PID mimicking network and compare  the two
+    for i in  range(2):
+        ego=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+        print('controller: ', i)
+        th1t=0
+        th2t=0
+        th1=[]
+        th2=[]
+        x_truck=[]
+        y_truck=[]
+        for j in range(len(t)):
+            if i == 1:
+                state = ego.convert_world_state_to_front()
+                ctrl_delta, ctrl_vel, err, interr, differr = pid.calc_steer_control(t[i],state,x_true,y_true, vel)
+                xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+                x_truck.append(xt)
+                y_truck.append(yt)
+                th1.append(th1t)
+                th2.append(th2t)
+                xp.append(xt); yp.append(yt)
+            else:
+                state = ego.convert_world_state_to_front()
+                ctrl_delta, ctrl_vel, err, interr, differr = controller.calc_steer_control(t[i],state,x_true,y_true, vel, th1t-th2t, network)
+                xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
+                x_truck.append(xt)
+                y_truck.append(yt)
+                th1.append(th1t)
+                th2.append(th2t)
+                x.append(xt); y.append(yt);
+        if i == 1:
+            pid_fitness, CTerr =calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
+        else:
+            controller_fitness, CTerr = calc_off_tracking(x_truck, y_truck, th1, th2, ego.P, x_true, y_true)
+    print('Benchmark PID fitness: ', pid_fitness)
+    print('Benchmark controller fitness: ', controller_fitness)
+    plt.plot(x,y)
+    plt.plot(x_true,y_true,'r--')
+    plt.plot(xp,yp,'g--')
+    plt.legend(['Network Performance','True Path', 'PID Performance'])
+    plt.show()
+
+def main():
+#    network=Net2()
+#    network.zero_grad()
     
     #Read in the benchmark paths that we will use
     Benchmark1=pd.read_csv('Benchmark_DLC_31ms_reduced.csv',sep=',',header=0)
@@ -607,4 +706,5 @@ def main():
 def calculateError():
     
     '''
-main()
+if __name__ == "__main__":
+    main()

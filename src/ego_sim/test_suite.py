@@ -67,8 +67,16 @@ def trailer_mass_variation_test(network,num_tests=5):
         ego_nn = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
         ego_nn.modify_parameters(m2_alpha=alpha[i])
         
-        pid_fitness.append([fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None) for j in range(0,num_tests)])
-        nn_fitness.append([fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network) for j in range(0,num_tests)])
+        for j in range(0,num_tests):
+            # Start a new PID controller and ego_sims for both controllers
+            pid = StanleyPID()
+            nn = NN2Control()
+            ego_pid = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+            ego_pid.modify_parameters(m2_alpha=alpha[i])
+            ego_nn = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+            ego_nn.modify_parameters(m2_alpha=alpha[i])
+            pid_fitness.append(fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None))
+            nn_fitness.append(fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network))
         
     pid_fitness_avg = [np.mean(fitness) for fitness in pid_fitness]
     nn_fitness_avg = [np.mean(fitness) for fitness in nn_fitness]
@@ -94,16 +102,17 @@ def trailer_stiffness_variation_test(network,num_tests=5):
     nn_fitness = []
     for i in range(0,len(alpha)):
         print('{} of {}'.format(i,len(alpha)))
-        # Start a new PID controller and ego_sims for both controllers
-        pid = StanleyPID()
-        nn = NN2Control()
-        ego_pid = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
-        ego_pid.modify_parameters(Ctrailer_alpha=alpha[i])
-        ego_nn = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
-        ego_nn.modify_parameters(Ctrailer_alpha=alpha[i])
 
-        pid_fitness.append([fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None) for j in range(0,num_tests)])
-        nn_fitness.append([fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network) for j in range(0,num_tests)])
+        for j in range(0,num_tests):
+            # Start a new PID controller and ego_sims for both controllers
+            pid = StanleyPID()
+            nn = NN2Control()
+            ego_pid = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+            ego_pid.modify_parameters(Ctrailer_alpha=alpha[i])
+            ego_nn = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+            ego_nn.modify_parameters(Ctrailer_alpha=alpha[i])
+            pid_fitness.append(fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None))
+            nn_fitness.append(fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network))
         
     pid_fitness_avg = [np.mean(fitness) for fitness in pid_fitness]
     nn_fitness_avg = [np.mean(fitness) for fitness in nn_fitness]
@@ -135,9 +144,17 @@ def trailer_length_variation_test(network,num_tests=5):
         ego_pid.modify_parameters(l2_alpha=alpha[i])
         ego_nn = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
         ego_nn.modify_parameters(l2_alpha=alpha[i])
-
-        pid_fitness.append([fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None) for j in range(0,num_tests)])
-        nn_fitness.append([fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network) for j in range(0,num_tests)])
+        
+        for j in range(0,num_tests):
+            # Start a new PID controller and ego_sims for both controllers
+            pid = StanleyPID()
+            nn = NN2Control()
+            ego_pid = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+            ego_pid.modify_parameters(Ctrailer_alpha=alpha[i])
+            ego_nn = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+            ego_nn.modify_parameters(Ctrailer_alpha=alpha[i])
+            pid_fitness.append(fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None))
+            nn_fitness.append(fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network))
         
     pid_fitness_avg = [np.mean(fitness) for fitness in pid_fitness]
     nn_fitness_avg = [np.mean(fitness) for fitness in nn_fitness]
@@ -192,14 +209,16 @@ def noisy_signal_test(network,num_tests=5):
     nn_fitness = []
     for i in range(0,len(noise)):
         print('{} of {}'.format(i,len(noise)))
-        # Start a new PID controller and ego_sims for both controllers
-        pid = StanleyPID()
-        nn = NN2Control()
-        ego_pid = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
-        ego_nn = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
-
-        pid_fitness.append([fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None,noise=noise[i]) for j in range(0,num_tests)])
-        nn_fitness.append([fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network,noise=noise[i]) for j in range(0,num_tests)])
+        
+        for j in range(0,num_tests):
+            # Start a new PID controller and ego_sims for both controllers
+            pid = StanleyPID()
+            nn = NN2Control()
+            ego_pid = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+            ego_nn = EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
+    
+            pid_fitness.append(fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true,vel,net=None,noise=noise[i]))
+            nn_fitness.append(fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true,vel,net=network,noise=noise[i]))
         
     pid_fitness_avg = [np.mean(fitness) for fitness in pid_fitness]
     nn_fitness_avg = [np.mean(fitness) for fitness in nn_fitness]
@@ -232,6 +251,11 @@ def fitness_from_simulation_loop(controller,ego,t,x_true,y_true,vel,net=None,noi
         xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
         x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
         
+    plt.plot(x,y)
+    if net is not None:
+        plt.title('Network')
+    else:
+        plt.title('PID')
     fitness, _ = calc_off_tracking(x, y, th1, th2, ego.P, x_true, y_true)
     return fitness
         

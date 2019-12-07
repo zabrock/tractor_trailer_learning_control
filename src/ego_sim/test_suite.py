@@ -29,7 +29,7 @@ def basic_fitness_comparison(network,num_tests=10):
     for i in range(0,num_tests):
         print('{} of {}'.format(i,num_tests))
         # Generate a random path
-        x_true, y_true, t, vel = rpg.get_harder_path(end_time=4)
+        x_true, y_true, t, vel = rpg.get_harder_path(end_time=15)
         # Start a new PID controller and ego_sims for both controllers
         pid = StanleyPID()
         nn = NN2Control()
@@ -172,7 +172,6 @@ def trailer_length_variation_test(network,num_tests=5):
     
     pid_fitness = []
     nn_fitness = []
-    print('new')
     for i in range(0,len(alpha)):
         print('{} of {}'.format(i,len(alpha)))
         
@@ -214,7 +213,7 @@ def initial_displacement_test(network):
     t = Benchmark1[:,2]
     vel = Benchmark1[:,3]
     
-    disp = np.linspace(0,20,num=40)
+    disp = np.linspace(0,10,num=20)
     
     pid_fitness = np.zeros(len(disp))
     nn_fitness = np.zeros(len(disp))

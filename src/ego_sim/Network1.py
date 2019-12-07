@@ -133,7 +133,7 @@ def train_network(network,k_crosstrack,k_heading):
     MSE1=0
     th1t=0
     th2t=0
-    for i in range(200000):
+    for i in range(20000):
         pid_list=pid.control_from_random_error()
         input1=pid_list[0:3]
         input2=pid_list[4:]
@@ -707,4 +707,6 @@ def calculateError():
     
     '''
 if __name__ == "__main__":
-    main()
+	network = train_nn_from_pid()
+	test_suite.trailer_length_variation_test(network)
+#    main()

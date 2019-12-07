@@ -163,12 +163,12 @@ def trailer_length_variation_test(network,num_tests=5):
     ts = []
     vels = []
     for i in range(0,num_tests):
-        x1,y1,t1,v1 = rpg.get_harder_path(end_time=5,vel=25)
+        x1,y1,t1,v1 = rpg.get_harder_path(end_time=10,vel=25)
         xs.append(x1)
         ys.append(y1)
         ts.append(t1)
         vels.append(v1)
-    alpha = np.linspace(0.1,2,num=5)
+    alpha = np.linspace(0.1,2,num=20)
     
     pid_fitness = []
     nn_fitness = []

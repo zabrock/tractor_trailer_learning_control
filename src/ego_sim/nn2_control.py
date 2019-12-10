@@ -79,9 +79,10 @@ class NN2Control(object):
         # Find cross-track and heading error between the current ppsition and desired path
         ct_err, hd_err = calc_path_error(state,path_x,path_y,I_min)
         if noise is not None:
-            added_noise = np.random.normal(0,noise/3)
-            ct_err = (1+added_noise)*ct_err
-            hd_err = (1+added_noise)*hd_err
+            added_noise = np.random.normal(0,noise)
+            added_ct_noise=np.random.normal(0,noise)
+            ct_err = added_ct_noise+ct_err
+            hd_err = added_noise+hd_err
         err = np.array([ct_err,hd_err])
         # Compute desired steering angle
         Ts = t - self.t_d1

@@ -112,7 +112,7 @@ class EvolutionaryAlgorithm(object):
             #print(vel)    
             ego=EgoSim(sim_timestep = t[1]-t[0], world_state_at_front=True)
             controller = NN2Control()
-            print('controller: ', i)
+            #print('controller: ', i)
             th1t=0
             th2t=0
             th1=[]
@@ -156,17 +156,18 @@ class EvolutionaryAlgorithm(object):
     
     def iterate(self,epsilon=0.1):
         # Pick a network to modify using the epsilon-greedy method
-        prob = np.random.random()
-        if prob > epsilon:
-            new_ctrlr = pickle.loads(pickle.dumps(self.controllers[self.best_controller_idx]))
-        else:
-            new_ctrlr = pickle.loads(pickle.dumps(random.choice(self.controllers)))
+
             
         # Randomly modify the network parameters and add it to the pool
         for i in  range(10):
+            prob = np.random.random()
+            if prob > epsilon:
+                new_ctrlr = pickle.loads(pickle.dumps(self.controllers[self.best_controller_idx]))
+            else:
+                new_ctrlr = pickle.loads(pickle.dumps(random.choice(self.controllers)))
             new_ctrlr = self.permutate_controller(new_ctrlr)
             self.controllers.append(new_ctrlr)
-        #print(self.controller_fitness)
+            #print(self.controller_fitness)
             self.controller_fitness=np.append(self.controller_fitness,0)
         # Evaluate fitness of all controllers on a randomly generated path
         self.evaluate_fitness()
@@ -178,15 +179,15 @@ class EvolutionaryAlgorithm(object):
         
     def update_best_controller(self):
         self.best_controller_idx = np.argmin(self.controller_fitness)
-        print('network fitness: ',self.controller_fitness)
-        print('best PID fitness:      ',self.pid_fitness)
+        #print('network fitness: ',self.controller_fitness)
+        #print('best PID fitness:      ',self.pid_fitness)
         #print(self.best_controller_idx)
         
     def select_next_generation(self):
         '''
         Selects next generation of controllers based on fitness
         '''
-        best_controller=np.argsort(self.controller_fitness[0:10])
+        best_controller=np.argsort(self.controller_fitness)
         new_controllers=copy.deepcopy(self.controllers[0:10])
         new_controller_fitness=copy.deepcopy(self.controller_fitness[0:10])
         for i in range(10):

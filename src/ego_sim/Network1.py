@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 from evolutionary_algorithm import EvolutionaryAlgorithm
 from Min_dist_test import calc_off_tracking
 import test_suite
-
+import pickle
 
 class Net2(nn.Module):
 
@@ -109,7 +109,7 @@ def train_network(network,k_crosstrack,k_heading):
 
         out=network(network_input)
 
-    print(running_loss)
+    #print(running_loss)
     plt.plot(x,y)
     plt.plot(x_true,y_true,'r--')
     plt.plot(xp,yp,'g--')
@@ -127,44 +127,54 @@ def train_network(network,k_crosstrack,k_heading):
     th1 = []
     th2 = []
     pl=0
-    plot_loss=[]
-    loss_time=[]
+    plot_loss=np.zeros([5,100])
+    loss_time=list(range(0,20000,200))
     MSE=[]
     MSE1=0
     th1t=0
     th2t=0
-    for i in range(20000):
-        pid_list=pid.control_from_random_error()
-        input1=pid_list[0:3]
-        input2=pid_list[4:]
-        input1=np.concatenate((input1,input2), axis=0)
-        input1= np.append(input1,np.pi*np.random.random()-np.pi/2)
-        #print(input1)
-        target1=pid_list[3]
-        network_input=torch.tensor(input1)
-        #print(network_input)
-        network_target=torch.tensor(target1)
-        network_target=network_target.double()
-        network= network.double()
-        #print(network_input)
-        out=network(network_input)
-        network.zero_grad()
-        criterion = nn.MSELoss()
-        loss = criterion(out, network_target)
-        loss.backward()
-        pl+=loss.item()
-        if (i%200==199) :
-            print(i)
-            loss_time.append(i)
-            plot_loss.append(pl/200)
-            pl=0
-
-        running_loss += loss.item()
-
-        for f in network.parameters():
-            f.data.sub_(f.grad.data * learning_rate)
-    print(running_loss)
-    plt.plot(loss_time,plot_loss)
+    temp_controller1 = pickle.loads(pickle.dumps(network))
+    temp_controller2 = pickle.loads(pickle.dumps(network))
+    temp_controller3 = pickle.loads(pickle.dumps(network))
+    temp_controller4 = pickle.loads(pickle.dumps(network))
+    networks=[network,temp_controller1,temp_controller2,temp_controller3,temp_controller4]
+    for j in range(5):
+        pl=0
+        for i in range(20000):
+            nwork=networks[j]
+            pid_list=pid.control_from_random_error()
+            input1=pid_list[0:3]
+            input2=pid_list[4:]
+            input1=np.concatenate((input1,input2), axis=0)
+            input1= np.append(input1,np.pi*np.random.random()-np.pi/2)
+            #print(input1)
+            target1=pid_list[3]
+            network_input=torch.tensor(input1)
+            #print(network_input)
+            network_target=torch.tensor(target1)
+            network_target=network_target.double()
+            nwork= nwork.double()
+            #print(network_input)
+            out=nwork(network_input)
+            nwork.zero_grad()
+            criterion = nn.MSELoss()
+            loss = criterion(out, network_target)
+            loss.backward()
+            pl+=loss.item()
+            if (i%200==199) :
+                print(int((i+1)/200-1))
+                plot_loss[j][int((i+1)/200-1)]=(pl/200)
+                pl=0
+        
+            running_loss += loss.item()
+        
+            for f in nwork.parameters():
+                f.data.sub_(f.grad.data * learning_rate)
+    #print(running_loss)
+    plot_loss_avg=np.average(plot_loss,axis=0)
+    plot_loss_std=np.std(plot_loss,axis=0)
+    #plt.plot(loss_time,plot_loss)
+    plt.errorbar(loss_time,plot_loss_avg,yerr=plot_loss_std,marker='s',capsize=5)
     plt.xlabel('Iteration Number')
     plt.ylabel('Average Loss of Past 200 Iterations, (rad)')
     plt.show()
@@ -226,7 +236,7 @@ def train_nn_from_pid(k_crosstrack = {'P':20, 'I':2, 'D':5},
         a=input('is this good enough?')
         if a=='1':
             break
-        
+    
     return network
 
 def test_network_on_benchmark(network,Benchmark):
@@ -286,8 +296,7 @@ def test_network_on_benchmark(network,Benchmark):
     plt.show()
 
 def main():
-#    network=Net2()
-#    network.zero_grad()
+    network = train_nn_from_pid()
     
     #Read in the benchmark paths that we will use
     Benchmark1=pd.read_csv('Benchmark_DLC_31ms_reduced.csv',sep=',',header=0)
@@ -348,13 +357,24 @@ def main():
 
     
     #Train the network until it is sufficient, asking the human operator for input on whether the point it reached  is  good enough
+    
+    
+    '''
     network=network.float()
     for i in range(10):
         train_network(network)
         a=input('is this good enough?')
         if a=='1':
             break
-
+    '''
+    '''
+    test_suite.basic_fitness_comparison(network)
+    test_suite.trailer_length_variation_test(network)
+    test_suite.trailer_mass_variation_test(network)
+    test_suite.trailer_stiffness_variation_test(network)
+    test_suite.noisy_signal_test(network)
+    test_suite.initial_displacement_test(network)
+    '''
     #Initialize varriables to run the first benchmark test  on the PID mimicking controller
     network=network.float()
 
@@ -406,20 +426,21 @@ def main():
     print('Benchmark 1 controller fitness: ', controller_fitness)
     plt.plot(x,y)
     plt.plot(x_true,y_true,'r--')
-    plt.plot(xp,yp,'g--')
+    plt.plot(xp,yp,'g:')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
     plt.xlabel('X location, (m)')
     plt.ylabel('Y Location, (m)')
     plt.show()
 
     #send the pid mimicking controller to the  evolutionary algorithm
-    print('bias   value before  evo: ', network.fc3.bias.data)
+    #print('bias   value before  evo: ', network.fc3.bias.data)
     evolution=EvolutionaryAlgorithm(network)
     for i in range(1000):
         print(i)
         evolution.iterate()
         #every 20 steps, run a benchmark on the best controller in the system to see how it is progressing
-        if i%20==0:
+        if i%100==0:
+            '''
             Fc1=network.fc1.weight.data.numpy()
             Fc2=network.fc2.weight.data.numpy()
             Fc3=network.fc3.weight.data.numpy()
@@ -444,6 +465,7 @@ def main():
             print(np.linalg.norm((Fc2b-Evo2b)))
             print((Fc3b-Evo3b))
             print(np.linalg.norm((Fc3b-Evo3b)))
+            '''
             controller = NN2Control()
             x_true=Benchmark1[:,0]
             y_true= Benchmark1[:,1]
@@ -498,7 +520,7 @@ def main():
             print('Benchmark 1 controller fitness: ', controller_fitness)
             plt.plot(x,y)
             plt.plot(x_true,y_true,'r--')
-            plt.plot(xp,yp,'g--')
+            plt.plot(xp,yp,'g:')
             plt.legend(['Network Performance','True Path', 'PID Performance'])
             plt.xlabel('X location, (m)')
             plt.ylabel('Y Location, (m)')
@@ -560,7 +582,7 @@ def main():
     print('Benchmark 1 controller fitness: ', controller_fitness)
     plt.plot(x,y)
     plt.plot(x_true,y_true,'r--')
-    plt.plot(xp,yp,'g--')
+    plt.plot(xp,yp,'g:')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
     plt.xlabel('X location, (m)')
     plt.ylabel('Y Location, (m)')
@@ -623,7 +645,7 @@ def main():
     print('Benchmark 2 controller fitness: ', controller_fitness)
     plt.plot(x,y)
     plt.plot(x_true,y_true,'r--')
-    plt.plot(xp,yp,'g--')
+    plt.plot(xp,yp,'g:')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
     plt.xlabel('X location, (m)')
     plt.ylabel('Y Location, (m)')
@@ -685,14 +707,20 @@ def main():
     print('Benchmark 3 controller fitness: ', controller_fitness)
     plt.plot(x,y)
     plt.plot(x_true,y_true,'r--')
-    plt.plot(xp,yp,'g--')
+    plt.plot(xp,yp,'g:')
     plt.legend(['Network Performance','True Path', 'PID Performance'])
     plt.xlabel('X location, (m)')
     plt.ylabel('Y Location, (m)')
     plt.show()
     # 
     #controller=NNControl()
-   
+    network=evolution.controllers[evolution.best_controller_idx]
+    test_suite.basic_fitness_comparison(network)
+    test_suite.trailer_length_variation_test(network)
+    test_suite.trailer_mass_variation_test(network)
+    test_suite.trailer_stiffness_variation_test(network)
+    test_suite.noisy_signal_test(network)
+    test_suite.initial_displacement_test(network)
     #controller.calc_steer_control(t,state,path_x,path_y,path_vel,network)
     #a=network.parameters()
     #print(a)
@@ -707,6 +735,6 @@ def calculateError():
     
     '''
 if __name__ == "__main__":
-	network = train_nn_from_pid()
-	test_suite.trailer_length_variation_test(network)
-#    main()
+	#network = train_nn_from_pid()
+	#test_suite.trailer_length_variation_test(network)
+    main()

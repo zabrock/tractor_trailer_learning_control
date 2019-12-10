@@ -63,7 +63,7 @@ def trailer_mass_variation_test(network,num_tests=5):
         ts.append(t1)
         vels.append(v1)
     # Set trailer mass alpha values to be looped through
-    alpha = np.linspace(0.1,2,num=20)
+    alpha = np.linspace(0.1,1.5,num=20)
     pid_fitness = []
     nn_fitness = []
     print('new')
@@ -93,7 +93,7 @@ def trailer_mass_variation_test(network,num_tests=5):
     nn_fitness_avg = [np.mean(fitness) for fitness in nn_fitness]
     pid_fitness_std = [np.std(fitness) for fitness in pid_fitness]
     nn_fitness_std = [np.std(fitness) for fitness in nn_fitness]
-    plt.errorbar(alpha*100,pid_fitness_avg,yerr=pid_fitness_std,marker='s',capsize=5)
+    plt.errorbar(alpha*100,pid_fitness_avg,yerr=pid_fitness_std,marker='s',capsize=5,ls='--')
     plt.errorbar(alpha*100,nn_fitness_avg,yerr=nn_fitness_std,marker='s',capsize=5)
     plt.xlabel('Percentage of design trailer mass (%)')
     plt.ylabel('Sum squared tracking error, $m^2$\n(lower is better)')
@@ -118,7 +118,7 @@ def trailer_stiffness_variation_test(network,num_tests=5):
         vels.append(v1)
         
     # Set trailer mass alpha values to be looped through
-    alpha = np.linspace(0.1,2,num=20)
+    alpha = np.linspace(0.25,2,num=20)
     pid_fitness = []
     nn_fitness = []
     for i in range(0,len(alpha)):
@@ -147,7 +147,7 @@ def trailer_stiffness_variation_test(network,num_tests=5):
     nn_fitness_avg = [np.mean(fitness) for fitness in nn_fitness]
     pid_fitness_std = [np.std(fitness) for fitness in pid_fitness]
     nn_fitness_std = [np.std(fitness) for fitness in nn_fitness]
-    plt.errorbar(alpha*100,pid_fitness_avg,yerr=pid_fitness_std,marker='s',capsize=5)
+    plt.errorbar(alpha*100,pid_fitness_avg,yerr=pid_fitness_std,marker='s',capsize=5,ls='--')
     plt.errorbar(alpha*100,nn_fitness_avg,yerr=nn_fitness_std,marker='s',capsize=5)
     plt.xlabel('Percentage of design trailer tire stiffness (%)')
     plt.ylabel('Sum squared tracking error, $m^2$\n(lower is better)')
@@ -168,7 +168,7 @@ def trailer_length_variation_test(network,num_tests=5):
         ys.append(y1)
         ts.append(t1)
         vels.append(v1)
-    alpha = np.linspace(0.1,2,num=20)
+    alpha = np.linspace(0.25,2,num=20)
     
     pid_fitness = []
     nn_fitness = []
@@ -197,7 +197,7 @@ def trailer_length_variation_test(network,num_tests=5):
     nn_fitness_avg = [np.mean(fitness) for fitness in nn_fitness]
     pid_fitness_std = [np.std(fitness) for fitness in pid_fitness]
     nn_fitness_std = [np.std(fitness) for fitness in nn_fitness]
-    plt.errorbar(alpha*100,pid_fitness_avg,yerr=pid_fitness_std,marker='s',capsize=5)
+    plt.errorbar(alpha*100,pid_fitness_avg,yerr=pid_fitness_std,marker='s',capsize=5,ls='--')
     plt.errorbar(alpha*100,nn_fitness_avg,yerr=nn_fitness_std,marker='s',capsize=5)
     plt.xlabel('Percentage of design trailer length (m)')
     plt.ylabel('Sum squared tracking error, $m^2$\n(lower is better)')
@@ -227,11 +227,11 @@ def initial_displacement_test(network):
 
         pid_fitness[i] = fitness_from_simulation_loop(pid,ego_pid,t,x_true,y_true+disp[i],vel,net=None)
         nn_fitness[i] = fitness_from_simulation_loop(nn,ego_nn,t,x_true,y_true+disp[i],vel,net=network)
-    plt.plot(disp,pid_fitness)
+    plt.plot(disp,pid_fitness,ls='--')
     plt.plot(disp,nn_fitness)
     plt.xlabel('Initial lateral displacement from path (m)')
     plt.ylabel('Sum squared tracking error, $m^2$\n(lower is better)')
-    plt.ylim(0,1.1*max(pid_fitness))
+    plt.ylim(0,5000)
     plt.legend(['PID','Neurocontroller'])
     plt.show()
     
@@ -277,9 +277,9 @@ def noisy_signal_test(network,num_tests=5):
     nn_fitness_avg = [np.mean(fitness) for fitness in nn_fitness]
     pid_fitness_std = [np.std(fitness) for fitness in pid_fitness]
     nn_fitness_std = [np.std(fitness) for fitness in nn_fitness]
-    plt.errorbar(noise*100,pid_fitness_avg,yerr=pid_fitness_std,marker='s',capsize=5)
+    plt.errorbar(noise*100,pid_fitness_avg,yerr=pid_fitness_std,marker='s',capsize=5,ls='--')
     plt.errorbar(noise*100,nn_fitness_avg,yerr=nn_fitness_std,marker='s',capsize=5)
-    plt.xlabel('Percent noise in error signals (%)')
+    plt.xlabel('Added noise to cross track error and heading error (m and rad)')
     plt.ylabel('Sum squared tracking error, $m^2$\n(lower is better)')
     plt.ylim(0,1.1*(max(pid_fitness_avg)+max(pid_fitness_std)))
     plt.legend(['PID','Neurocontroller'])
@@ -303,14 +303,16 @@ def fitness_from_simulation_loop(controller,ego,t,x_true,y_true,vel,net=None,noi
 #        print(ctrl_delta)
         xt,yt,deltat,th1t,th2t = ego.simulate_timestep([ctrl_vel,ctrl_delta])
         x.append(xt); y.append(yt); delta.append(deltat); th1.append(th1t); th2.append(th2t)
-        
+        '''
     plt.plot(x,y)
     if net is not None:
         plt.title('Network')
     else:
         plt.title('PID')
     plt.show()
+    '''
     fitness, _ = calc_off_tracking(x, y, th1, th2, ego.P, x_true, y_true)
+    
     return fitness
         
 if __name__ == "__main__":
